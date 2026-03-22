@@ -12,7 +12,7 @@ from core.utils.decorator import except_handler
 # ------------
 
 LOCK = Lock()
-GPT_LOG_FOLDER = 'output/gpt_log'
+GPT_LOG_FOLDER = 'static/output/gpt_log'
 
 def _save_cache(model, prompt, resp_content, resp_type, resp, message=None, log_title="default"):
     with LOCK:

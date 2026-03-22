@@ -67,7 +67,7 @@
     "Generate and merge audio files": "音声ファイルの生成と統合",
     "Merge final audio into video": "最終音声を動画に統合",
     "Start Audio Processing": "音声処理を開始",
-    "Audio processing is complete! You can check the audio files in the `output` folder.": "音声処理が完了しました！`output`フォルダで音声ファイルを確認できます。",
+    "Audio processing is complete! You can check the audio files in the `static/output` folder.": "音声処理が完了しました！`static/output`フォルダ内の音声ファイルを確認できます。",
     "Delete dubbing files": "吹き替えファイルを削除",
     "Generate audio tasks": "音声タスクを生成",
     "Extract refer audio": "参照音声を抽出",

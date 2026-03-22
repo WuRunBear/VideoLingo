@@ -36,7 +36,7 @@ def translate_lines(lines, previous_content_prompt, after_cotent_prompt, things_
                 return result
             if retry != 2:
                 console.print(f'[yellow]⚠️ {step_name.capitalize()} translation of block {index} failed, Retry...[/yellow]')
-        raise ValueError(f'[red]❌ {step_name.capitalize()} translation of block {index} failed after 3 retries. Please check `output/gpt_log/error.json` for more details.[/red]')
+        raise ValueError(f'[red]❌ {step_name.capitalize()} translation of block {index} failed after 3 retries. Please check `static/output/gpt_log/error.json` for more details.[/red]')
 
     ## Step 1: Faithful to the Original Text
     prompt1 = get_prompt_faithfulness(lines, shared_prompt)
@@ -80,7 +80,7 @@ def translate_lines(lines, previous_content_prompt, after_cotent_prompt, things_
     translate_result = "\n".join([express_result[i]["free"].replace('\n', ' ').strip() for i in express_result])
 
     if len(lines.split('\n')) != len(translate_result.split('\n')):
-        console.print(Panel(f'[red]❌ Translation of block {index} failed, Length Mismatch, Please check `output/gpt_log/translate_expressiveness.json`[/red]'))
+        console.print(Panel(f'[red]❌ Translation of block {index} failed, Length Mismatch, Please check `static/output/gpt_log/translate_expressiveness.json`[/red]'))
         raise ValueError(f'Origin ···{lines}···,\nbut got ···{translate_result}···')
 
     return translate_result, lines

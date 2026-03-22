@@ -1,2 +1,3 @@
 [server]
 maxUploadSize = 4096
+enableStaticServing = true

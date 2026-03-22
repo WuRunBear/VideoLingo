@@ -90,7 +90,7 @@
     "Generate and merge audio files": "Создание и объединение аудио файлов",
     "Merge final audio into video": "Объединение финального аудио с видео",
     "Start Audio Processing": "Начать обработку аудио",
-    "Audio processing is complete! You can check the audio files in the `output` folder.": "Обработка аудио завершена! Вы можете проверить аудио файлы в папке `output`.",
+    "Audio processing is complete! You can check the audio files in the `static/output` folder.": "Обработка аудио завершена! Вы можете проверить аудиофайлы в папке `static/output`.",
     "Delete dubbing files": "Удалить файлы дубляжа",
     "Generate audio tasks": "Создать аудио задачи",
     "Extract refer audio": "Извлечь эталонное аудио",

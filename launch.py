@@ -74,7 +74,7 @@ def main():
             print(f"  [WARN] {w}")
         print()
 
-    # Launch
+    # Launch Streamlit
     log("Launching Streamlit...")
     os.environ["PYTHONWARNINGS"] = "ignore"
     try:

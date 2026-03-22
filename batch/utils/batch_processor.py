@@ -41,12 +41,12 @@ def process_batch():
                 
                 if os.path.exists(error_folder):
                     # Ensure the output folder exists
-                    os.makedirs('output', exist_ok=True)
+                    os.makedirs('static/output', exist_ok=True)
                     
                     # Copy all contents from ERROR folder for the specific video to output
                     for item in os.listdir(error_folder):
                         src_path = os.path.join(error_folder, item)
-                        dst_path = os.path.join('output', item)
+                        dst_path = os.path.join('static/output', item)
                         
                         if os.path.isdir(src_path):
                             if os.path.exists(dst_path):

@@ -12,9 +12,10 @@ from core.utils.models import *
 
 console = Console()
 
-DUB_VIDEO = "output/output_dub.mp4"
-DUB_SUB_FILE = 'output/dub.srt'
-DUB_AUDIO = 'output/dub.mp3'
+SUB_VIDEO = "static/output/output_sub.mp4"
+DUB_VIDEO = "static/output/output_dub.mp4"
+DUB_SUB_FILE = 'static/output/dub.srt'
+DUB_AUDIO = 'static/output/dub.mp3'
 
 TRANS_FONT_SIZE = 17
 TRANS_FONT_NAME = 'Arial'

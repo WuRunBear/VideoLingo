@@ -90,7 +90,7 @@
     "Generate and merge audio files": "Générer et fusionner les fichiers audio",
     "Merge final audio into video": "Fusionner l'audio final dans la vidéo",
     "Start Audio Processing": "Démarrer le traitement audio",
-    "Audio processing is complete! You can check the audio files in the `output` folder.": "Le traitement audio est terminé ! Vous pouvez vérifier les fichiers audio dans le dossier `output`.",
+    "Audio processing is complete! You can check the audio files in the `static/output` folder.": "Le traitement audio est terminé ! Vous pouvez vérifier les fichiers audio dans le dossier `static/output`.",
     "Delete dubbing files": "Supprimer les fichiers de doublage",
     "Generate audio tasks": "Générer les tâches audio",
     "Extract refer audio": "Extraire l'audio de référence",

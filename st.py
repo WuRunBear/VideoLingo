@@ -10,8 +10,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 st.set_page_config(page_title="VideoLingo", page_icon="docs/logo.svg")
 
-SUB_VIDEO = "output/output_sub.mp4"
-DUB_VIDEO = "output/output_dub.mp4"
+SUB_VIDEO = "static/output/output_sub.mp4"
+DUB_VIDEO = "static/output/output_dub.mp4"
 
 def text_processing_section():
     st.header(t("b. Translate and Generate Subtitles"))
@@ -37,6 +37,15 @@ def text_processing_section():
                 st.video(SUB_VIDEO)
             download_subtitle_zip_button(text=t("Download All Srt Files"))
             
+            if os.path.exists("static/output/log/translation_results.xlsx"):
+                st.download_button(
+                    label="📥 " + t("Download Translation Results"),
+                    data=open("static/output/log/translation_results.xlsx", "rb"),
+                    file_name="translation_results.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            
             if st.button(t("Archive to 'history'"), key="cleanup_in_text_processing"):
                 cleanup()
                 st.rerun()
@@ -51,7 +60,7 @@ def process_text():
     with st.spinner(t("Summarizing and translating...")):
         _4_1_summarize.get_summary()
         if load_key("pause_before_translate"):
-            input(t("⚠️ PAUSE_BEFORE_TRANSLATE. Go to `output/log/terminology.json` to edit terminology. Then press ENTER to continue..."))
+            input(t("⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue..."))
         _4_2_translate.translate_all()
     with st.spinner(t("Processing and aligning subtitles...")): 
         _5_split_sub.split_for_sub_main()
@@ -79,9 +88,19 @@ def audio_processing_section():
                 process_audio()
                 st.rerun()
         else:
-            st.success(t("Audio processing is complete! You can check the audio files in the `output` folder."))
+            st.success(t("Audio processing is complete! You can check the audio files in the `static/output` folder."))
             if load_key("burn_subtitles"):
                 st.video(DUB_VIDEO) 
+            
+            if os.path.exists("static/output/audio/tts_tasks.xlsx"):
+                st.download_button(
+                    label="📥 " + t("Download Audio Tasks"),
+                    data=open("static/output/audio/tts_tasks.xlsx", "rb"),
+                    file_name="tts_tasks.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+
             if st.button(t("Delete dubbing files"), key="delete_dubbing_files"):
                 delete_dubbing_files()
                 st.rerun()

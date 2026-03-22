@@ -67,7 +67,7 @@
     "Generate and merge audio files": "生成和合并音频文件",
     "Merge final audio into video": "将最终音频合并到视频中",
     "Start Audio Processing": "开始音频处理",
-    "Audio processing is complete! You can check the audio files in the `output` folder.": "音频处理完成！您可以在`output`文件夹中查看音频文件。",
+    "Audio processing is complete! You can check the audio files in the `static/output` folder.": "音频处理完成！你可以在 `static/output` 文件夹中查看音频文件。",
     "Delete dubbing files": "删除配音文件",
     "Generate audio tasks": "生成音频任务",
     "Extract refer audio": "提取参考音频",

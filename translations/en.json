@@ -67,7 +67,7 @@
     "Generate and merge audio files": "Generate and merge audio files",
     "Merge final audio into video": "Merge final audio into video",
     "Start Audio Processing": "Start Audio Processing",
-    "Audio processing is complete! You can check the audio files in the `output` folder.": "Audio processing is complete! You can check the audio files in the `output` folder.",
+    "Audio processing is complete! You can check the audio files in the `static/output` folder.": "Audio processing is complete! You can check the audio files in the `static/output` folder.",
     "Delete dubbing files": "Delete dubbing files",
     "Generate audio tasks": "Generate audio tasks",
     "Extract refer audio": "Extract refer audio",

@@ -7,8 +7,8 @@ from core.tts_backend.estimate_duration import init_estimator, estimate_duration
 from core.utils import *
 from core.utils.models import *
 
-SRC_SRT = "output/src.srt"
-TRANS_SRT = "output/trans.srt"
+SRC_SRT = "static/output/src.srt"
+TRANS_SRT = "static/output/trans.srt"
 MAX_MERGE_COUNT = 5
 ESTIMATOR = None
 

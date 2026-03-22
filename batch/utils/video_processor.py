@@ -11,7 +11,7 @@ from core import *
 console = Console()
 
 INPUT_DIR = 'batch/input'
-OUTPUT_DIR = 'output'
+OUTPUT_DIR = 'static/output'
 SAVE_DIR = 'batch/output'
 ERROR_OUTPUT_DIR = 'batch/output/ERROR'
 YTB_RESOLUTION_KEY = "ytb_resolution"

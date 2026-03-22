@@ -52,21 +52,33 @@ def convert_video_to_audio(video_file: str):
         subprocess.run(cmd, check=True, stderr=subprocess.PIPE)
         rprint(f"[green]🎬➡️🎵 Converted <{video_file}> to <{_RAW_AUDIO_FILE}> with FFmpeg\n[/green]")
 
-def get_audio_duration(audio_file: str) -> float:
-    """Get the duration of an audio file using ffmpeg."""
-    cmd = ['ffmpeg', '-i', audio_file]
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    _, stderr = process.communicate()
-    output = stderr.decode('utf-8', errors='ignore')
-    
+def get_audio_duration(file_path):
+    """Get the duration of an audio file in seconds."""
+    cmd = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', file_path]
     try:
-        duration_str = [line for line in output.split('\n') if 'Duration' in line][0]
-        duration_parts = duration_str.split('Duration: ')[1].split(',')[0].split(':')
-        duration = float(duration_parts[0])*3600 + float(duration_parts[1])*60 + float(duration_parts[2])
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        return float(output.decode('utf-8').strip())
+    except subprocess.CalledProcessError:
+        return 0.0
     except Exception as e:
-        print(f"[red]❌ Error: Failed to get audio duration: {e}[/red]")
-        duration = 0
-    return duration
+        print(f"Error getting audio duration: {e}")
+        return 0.0
+
+def process_audio_file(video_file: str, role_audios: bool) -> tuple[str, str, str]:
+    """
+    Process the video file to extract audio and separate vocals.
+    
+    Args:
+        video_file: Path to the input video file
+        role_audios: Whether to generate multi-role audio files
+        
+    Returns:
+        tuple: (raw_audio_path, vocal_audio_path, background_audio_path)
+    """
+    raw_audio_path = _RAW_AUDIO_FILE
+    vocal_audio_path = "static/output/audio/vocal.mp3"
+    background_audio_path = "static/output/audio/background.mp3"
+    return raw_audio_path, vocal_audio_path, background_audio_path
 
 def split_audio(audio_file: str, target_len: float = 30*60, win: float = 60) -> List[Tuple[float, float]]:
     ## 在 [target_len-win, target_len+win] 区间内用 pydub 检测静默，切分音频

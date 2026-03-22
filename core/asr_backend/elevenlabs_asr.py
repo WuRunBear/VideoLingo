@@ -66,7 +66,7 @@ def elev2whisper(elev_json, word_level_timestamp = False):
 
 def transcribe_audio_elevenlabs(raw_audio_path, vocal_audio_path, start = None, end = None):
     rprint(f"[cyan]🎤 Processing audio transcription, file path: {vocal_audio_path}[/cyan]")
-    LOG_FILE = f"output/log/elevenlabs_transcribe_{start}_{end}.json"
+    LOG_FILE = f"static/output/log/elevenlabs_transcribe_{start}_{end}.json"
     if os.path.exists(LOG_FILE):
         with open(LOG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -141,5 +141,5 @@ if __name__ == "__main__":
     print(result)
     
     # Save result to file
-    with open("output/transcript.json", "w", encoding="utf-8") as f:
+    with open("static/output/transcript.json", "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=4)

@@ -8,9 +8,9 @@ from core.utils import *
 from core.utils.models import *
 console = Console()
 
-DUB_VOCAL_FILE = 'output/dub.mp3'
+DUB_VOCAL_FILE = 'static/output/dub.mp3'
 
-DUB_SUB_FILE = 'output/dub.srt'
+DUB_SUB_FILE = 'static/output/dub.srt'
 OUTPUT_FILE_TEMPLATE = f"{_AUDIO_SEGS_DIR}/{{}}.wav"
 
 def load_and_flatten_data(excel_file):

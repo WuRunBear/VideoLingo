@@ -4,7 +4,7 @@ Videolingo 是一个高度集成的视频翻译系统，能够自动执行一系
 
 该项目已经过重大重构，形成了一个更加模块化和健壮的结构。核心功能现在组织成不同的包和模块，主要位于 `core` 目录及其子目录（`asr_backend`、`spacy_utils`、`st_utils`、`tts_backend`、`utils`）中，以及一个专门的 `batch` 目录用于批量处理实用程序，以及一个 `translations` 目录用于国际化。
 
-对于开发人员来说，`core` 目录中的许多组件（尤其是编号为 `_X_*.py` 的文件）代表处理管道中的不同步骤，并且可以单独执行以进行调试。中间输出和最终输出通常存储在 `output` 目录中，并具有清理和归档到 `history` 目录的机制。
+对于开发人员来说，`core` 目录中的许多组件（尤其是编号为 `_X_*.py` 的文件）代表处理管道中的不同步骤，并且可以单独执行以进行调试。中间输出和最终输出通常存储在 `static/output` 目录中，并具有清理和归档到 `history` 目录的机制。
 
 以下概述核心技术模块和工作流程：
 
@@ -65,8 +65,8 @@ Videolingo 是一个高度集成的视频翻译系统，能够自动执行一系
     *   `core/tts_backend/estimate_duration.py`: 提供根据特定语言的音节计数和标点符号停顿来估计文本的说话时长的函数。用于音频任务生成和字幕修剪。
     *   `core/tts_backend/tts_main.py`: 中央 TTS 调度器。清理输入文本，根据配置 (`load_key("tts_method")`) 选择适当的 TTS 后端，调用相应的 TTS 函数，使用重试和基于 GPT 的文本纠正来处理错误，验证音频时长，并保存输出 WAV 文件。
 *   `core/_10_gen_audio.py`: 使用选定的 TTS 后端通过 `tts_main.py` 生成单独的音频片段。基于计算的因子调整生成的音频速度 (`ffmpeg`) 以适应任务文件中指定的目标时长，并将片段合并为块。使用 `ThreadPoolExecutor` 处理并行处理。
-*   `core/_11_merge_audio.py`: 将生成的和速度调整的音频片段（来自 `output/audio_segments/` 的 `.wav` 文件）合并为单个连续的配音音轨 (`output/dub.wav`)，根据字幕时序添加静音。 还生成相应的 SRT 文件 (`output/dub.srt`)。
-*   `core/_12_dub_to_vid.py`: 配音的最终合成步骤。使用 `ffmpeg` 合并原始视频、生成的配音音轨 (`output/dub.wav`) 和分离的背景音乐 (`output/background.mp3`，如果使用了 Demucs)。可选择在此过程中烧录字幕。包括音频标准化。
+*   `core/_11_merge_audio.py`: 将生成的和速度调整的音频片段（来自 `static/output/audio_segments/` 的 `.wav` 文件）合并为单个连续的配音音轨 (`static/output/dub.wav`)，根据字幕时序添加静音。还生成相应的 SRT 文件 (`static/output/dub.srt`)。
+*   `core/_12_dub_to_vid.py`: 配音的最终合成步骤。使用 `ffmpeg` 合并原始视频、生成的配音音轨 (`static/output/dub.wav`) 和分离的背景音乐 (`static/output/background.mp3`，如果使用了 Demucs)。可选择在此过程中烧录字幕。包括音频标准化。
 
 **7. 核心实用程序和配置 (`core/utils`):**
 
@@ -74,8 +74,8 @@ Videolingo 是一个高度集成的视频翻译系统，能够自动执行一系
 *   `core/utils/ask_gpt.py`: 提供一个强大的接口（`ask_gpt` 函数）用于与 OpenAI GPT 模型交互。 包括缓存（基于文件）、JSON 响应修复 (`json_repair`)、响应验证、带重试的错误处理 (`@except_handler`) 和日志记录。
 *   `core/utils/config_utils.py`: 实用程序函数 (`load_key`, `update_key`)，用于使用 `ruamel.yaml`（保留格式）和 `threading.Lock` 以线程安全的方式从 `config.yaml` 加载和更新配置设置。包括 `get_joiner` 用于特定语言的文本连接。
 *   `core/utils/decorator.py`: 定义可重用的装饰器：`except_handler` 用于向函数添加重试逻辑和错误报告，`check_file_exists` 用于如果输出文件已存在则跳过函数执行。 使用 `rich` 进行格式化的输出。
-*   `core/utils/delete_retry_dubbing.py`: 提供一个函数 (`delete_dubbing_files`) 来清理与配音过程相关的特定中间文件和目录（例如，`dub.wav`、`output_dub.mp4`、`output/audio/segs`）。
-*   `core/utils/onekeycleanup.py`: 实现 `cleanup` 函数，用于将文件从 `output` 目录组织和归档到基于视频名称的结构化的 `history` 目录中。包括文件名清理和强大的文件移动/删除逻辑。
+*   `core/utils/delete_retry_dubbing.py`: 提供一个函数 (`delete_dubbing_files`) 来清理与配音过程相关的特定中间文件和目录（例如，`dub.wav`、`output_dub.mp4`、`static/output/audio/segs`）。
+*   `core/utils/onekeycleanup.py`: 实现 `cleanup` 函数，用于将文件从 `static/output` 目录组织和归档到基于视频名称的结构化的 `history` 目录中。包括文件名清理和强大的文件移动/删除逻辑。
 *   `core/utils/pypi_autochoose.py`: 用于自动测试和选择最快的 PyPI 镜像并配置 pip 以使用它的实用程序。 使用 `rich` 进行 UI。
 *   `core/utils/models.py`: 定义表示整个管道中使用的各种中间文件和输出文件的文件路径的常量。
 *   `core/__init__.py`, `core/asr_backend/__init__.py`, `core/spacy_utils/__init__.py`, `core/st_utils/__init__.py`, `core/tts_backend/__init__.py`: 包初始化文件，定义其各自包/子包的公共接口 (`__all__`)。

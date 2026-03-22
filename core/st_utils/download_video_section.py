@@ -9,7 +9,7 @@ from core._1_ytdlp import download_video_ytdlp, find_video_files
 from core.utils import *
 from translations.translations import translate as t
 
-OUTPUT_DIR = "output"
+OUTPUT_DIR = "static/output"
 
 def download_video_section():
     st.header(t("a. Download or Upload Video"))
@@ -24,7 +24,7 @@ def download_video_section():
                 sleep(1)
                 st.rerun()
             return True
-        except:
+        except Exception:
             col1, col2 = st.columns([3, 1])
             with col1:
                 url = st.text_input(t("Enter YouTube link:"))
@@ -49,6 +49,7 @@ def download_video_section():
             if uploaded_file:
                 if os.path.exists(OUTPUT_DIR):
                     shutil.rmtree(OUTPUT_DIR)
+                # Save the uploaded file to the static/output directory
                 os.makedirs(OUTPUT_DIR, exist_ok=True)
                 
                 raw_name = uploaded_file.name.replace(' ', '_')

@@ -11,8 +11,8 @@ from core.utils.models import *
 console = Console()
 speed_factor = load_key("speed_factor")
 
-TRANS_SUBS_FOR_AUDIO_FILE = 'output/audio/trans_subs_for_audio.srt'
-SRC_SUBS_FOR_AUDIO_FILE = 'output/audio/src_subs_for_audio.srt'
+TRANS_SUBS_FOR_AUDIO_FILE = 'static/output/audio/trans_subs_for_audio.srt'
+SRC_SUBS_FOR_AUDIO_FILE = 'static/output/audio/src_subs_for_audio.srt'
 ESTIMATOR = None
 
 def check_len_then_trim(text, duration):

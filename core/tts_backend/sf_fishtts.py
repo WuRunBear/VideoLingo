@@ -215,7 +215,7 @@ def siliconflow_fish_tts_for_videolingo(text, save_as, number, task_df):
 
 if __name__ == '__main__':
     pass
-    # create_custom_voice("output/audio/refers/1.wav", "Okay folks, welcome back. This is price action model number four, position trading.")
+    # create_custom_voice("static/output/audio/refers/1.wav", "Okay folks, welcome back. This is price action model number four, position trading.")
     siliconflow_fish_tts("가을 나뭇잎이 부드럽게 떨어지는 생생한 색깔을 주목하지 않을 수 없었다", "preset_test.wav", mode="preset", check_duration=True)
     # siliconflow_fish_tts("使用客制化音色测试", "custom_test.wav", mode="custom", voice_id="speech:your-voice-name:cm04pf7az00061413w7kz5qxs:mjtkgbyuunvtybnsvbxd")
-    # siliconflow_fish_tts("使用动态音色测试", "dynamic_test.wav", mode="dynamic", ref_audio="output/audio/refers/1.wav", ref_text="Okay folks, welcome back. This is price action model number four, position trading.")
+    # siliconflow_fish_tts("使用动态音色测试", "dynamic_test.wav", mode="dynamic", ref_audio="static/output/audio/refers/1.wav", ref_text="Okay folks, welcome back. This is price action model number four, position trading.")

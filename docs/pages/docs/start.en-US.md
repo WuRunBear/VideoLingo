@@ -174,6 +174,8 @@ Before installing VideoLingo, ensure you have installed Git and Anaconda.
 
 6. (Optional) More settings can be manually modified in `config.yaml`, watch command line output during operation. To use custom terms, add them to `custom_terms.xlsx` before processing, e.g. `Baguette | French bread | Not just any bread!`.
 
+Note: VideoLingo will place the intermediate files of the currently processing video in the `static/output` folder, and automatically move them to the `static/history` folder after processing is complete. If you want to forcefully end the process, you can directly move or delete the files under `static/output`.
+
 > Need help? Our [AI Assistant](https://share.fastgpt.in/chat/share?shareId=066w11n3r9aq6879r4z0v9rh) is here to guide you through any issues!
 
 ## 🏭 Batch Mode (beta)
@@ -187,7 +189,7 @@ Note: This section is still in early development and may have limited functional
 1. **'All array must be of the same length' or 'Key Error' during translation**: 
    - Reason 1: Weaker models have poor JSON format compliance causing response parsing errors.
    - Reason 2: LLM may refuse to translate sensitive content.
-   Solution: Check `response` and `msg` fields in `output/gpt_log/error.json`, delete the `output/gpt_log` folder and retry.
+   Solution: Check `response` and `msg` fields in `static/output/gpt_log/error.json`, delete the `static/output/gpt_log` folder and retry.
 
 2. **'Retry Failed', 'SSL', 'Connection', 'Timeout'**: Usually network issues. Solution: Users in mainland China please switch network nodes and retry.
 
