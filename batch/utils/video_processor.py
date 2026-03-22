@@ -102,3 +102,23 @@ def process_and_align_subtitles():
 def gen_audio_tasks():
     _8_1_audio_task.gen_audio_task_main()
     _8_2_dub_chunks.gen_dub_chunks()
+
+def save_error_state(video_name):
+    """Save the current output folder state when an error occurs"""
+    error_folder = os.path.join('batch', 'static', 'output', 'ERROR', video_name)
+    os.makedirs(error_folder, exist_ok=True)
+    
+    # Copy all contents from static/output to error folder
+    if os.path.exists('static/output'):
+        for item in os.listdir('static/output'):
+            src = os.path.join('static/output', item)
+            dst = os.path.join(error_folder, item)
+            try:
+                if os.path.isdir(src):
+                    if os.path.exists(dst):
+                        shutil.rmtree(dst)
+                    shutil.copytree(src, dst)
+                else:
+                    shutil.copy2(src, dst)
+            except Exception as e:
+                print(f"Error saving {item} to error state: {e}")

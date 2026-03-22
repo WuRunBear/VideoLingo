@@ -36,17 +36,17 @@ def process_batch():
                 console.print(Panel(f"Retrying failed task: {video_file}\nTask {index + 1}/{total_tasks}", 
                                  title="[bold yellow]Retry Task", expand=False))
                 
-                # Restore files from batch/output/ERROR to output
-                error_folder = os.path.join('batch', 'output', 'ERROR', os.path.splitext(video_file)[0])
+                # Restore files from batch/static/output/ERROR to static/output
+                error_folder = os.path.join('batch', 'static', 'output', 'ERROR', os.path.splitext(video_file)[0])
                 
                 if os.path.exists(error_folder):
                     # Ensure the output folder exists
-                    os.makedirs('static/output', exist_ok=True)
+                    os.makedirs(os.path.join('static', 'output'), exist_ok=True)
                     
                     # Copy all contents from ERROR folder for the specific video to output
                     for item in os.listdir(error_folder):
                         src_path = os.path.join(error_folder, item)
-                        dst_path = os.path.join('static/output', item)
+                        dst_path = os.path.join('static', 'output', item)
                         
                         if os.path.isdir(src_path):
                             if os.path.exists(dst_path):
@@ -90,7 +90,7 @@ def process_batch():
         else:
             print(f"Skipping task: {row['Video File']} - Status: {row['Status']}")
 
-    console.print(Panel("All tasks processed!\nCheck out in `batch/output`!", 
+    console.print(Panel("All tasks processed!\nCheck out in `batch/static/output`!", 
                        title="[bold green]Batch Processing Complete", expand=False))
 
 if __name__ == "__main__":
