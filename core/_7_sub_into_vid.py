@@ -28,7 +28,7 @@ TRANS_OUTLINE_COLOR = '&H000000'
 TRANS_OUTLINE_WIDTH = 1 
 TRANS_BACK_COLOR = '&H33000000'
 
-OUTPUT_DIR = "output"
+OUTPUT_DIR = "static/output"
 OUTPUT_VIDEO = f"{OUTPUT_DIR}/output_sub.mp4"
 SRC_SRT = f"{OUTPUT_DIR}/src.srt"
 TRANS_SRT = f"{OUTPUT_DIR}/trans.srt"
@@ -59,7 +59,7 @@ def merge_subtitles_to_video():
         return
 
     if not os.path.exists(SRC_SRT) or not os.path.exists(TRANS_SRT):
-        rprint("Subtitle files not found in the 'output' directory.")
+        rprint("Subtitle files not found in the 'static/output' directory.")
         exit(1)
 
     video = cv2.VideoCapture(video_file)
