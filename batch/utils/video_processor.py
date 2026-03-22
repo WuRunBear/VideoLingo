@@ -12,8 +12,8 @@ console = Console()
 
 INPUT_DIR = 'batch/input'
 OUTPUT_DIR = 'static/output'
-SAVE_DIR = 'batch/output'
-ERROR_OUTPUT_DIR = 'batch/output/ERROR'
+SAVE_DIR = 'batch/static/output'
+ERROR_OUTPUT_DIR = 'batch/static/output/ERROR'
 YTB_RESOLUTION_KEY = "ytb_resolution"
 
 def process_video(file, dubbing=False, is_retry=False):
