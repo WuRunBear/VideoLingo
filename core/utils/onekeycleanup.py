@@ -20,7 +20,7 @@ def cleanup(history_dir="static/history"):
 
     # Move non-log files
     for file in glob.glob("static/output/*"):
-        if not file.endswith(('log', 'gpt_log')):
+        if not file.endswith(('log', 'gpt_log', 'audio')):
             move_file(file, video_history_dir)
 
     # Move log files

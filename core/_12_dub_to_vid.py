@@ -56,17 +56,7 @@ def merge_video_audio():
     TARGET_WIDTH = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     TARGET_HEIGHT = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     video.release()
-    
-    # Fallback to ffprobe if cv2 fails
-    if TARGET_WIDTH == 0 or TARGET_HEIGHT == 0:
-        try:
-            cmd = ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', VIDEO_FILE]
-            output = subprocess.check_output(cmd).decode('utf-8').strip().split('x')
-            TARGET_WIDTH, TARGET_HEIGHT = int(output[0]), int(output[1])
-        except Exception as e:
-            rprint(f"[bold yellow]Warning: Failed to get resolution via ffprobe: {e}. Defaulting to 1920x1080.[/bold yellow]")
-            TARGET_WIDTH, TARGET_HEIGHT = 1920, 1080
-            
+
     rprint(f"[bold green]Video resolution: {TARGET_WIDTH}x{TARGET_HEIGHT}[/bold green]")
     
     subtitle_filter = (

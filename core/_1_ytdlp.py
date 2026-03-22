@@ -56,7 +56,7 @@ def find_video_files(save_path='static/output'):
     # change \\ to /, this happen on windows
     if sys.platform.startswith('win'):
         video_files = [file.replace("\\", "/") for file in video_files]
-    video_files = [file for file in video_files if not file.startswith("static/output/output")]
+    video_files = [file for file in video_files if not file.startswith(f"{save_path}/output")]
     if len(video_files) != 1:
         raise ValueError(f"Number of videos found {len(video_files)} is not unique. Please check.")
     return video_files[0]
