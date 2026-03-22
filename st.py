@@ -1,4 +1,3 @@
-import streamlit as st
 import os, sys
 import mimetypes
 
@@ -16,6 +15,7 @@ mimetypes.add_type('image/png', '.png')
 mimetypes.add_type('image/jpeg', '.jpg')
 mimetypes.add_type('image/svg+xml', '.svg')
 
+import streamlit as st
 from core.st_utils.imports_and_utils import *
 from core import *
 
