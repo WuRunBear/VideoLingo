@@ -107,6 +107,7 @@
     "No NVIDIA GPU detected or NVIDIA drivers not properly installed": "未检测到NVIDIA GPU或NVIDIA驱动未正确安装",
     "LLM JSON Format Support": "LLM JSON格式支持",
     "Enable if your LLM supports JSON mode output": "如果选用的LLM支持JSON模式输出，请启用",
-    "File Explorer": "文件浏览器"
+    "File Explorer": "文件浏览器",
+    "💡 You can now access the File Explorer from the sidebar on the left.": "💡 文件浏览器已经移至左侧边栏，你可以点击侧边栏进行访问。"
 }
 

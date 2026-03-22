@@ -124,70 +124,6 @@ def process_audio():
     st.success(t("Audio processing complete! 🎇"))
     st.balloons()
 
-def render_directory(dir_path, base_dir, depth=0):
-    """Recursively render directories using st.expander"""
-    import urllib.parse
-    
-    try:
-        items = list(dir_path.iterdir())
-        dirs = sorted([d for d in items if d.is_dir()])
-        files = sorted([f for f in items if f.is_file()])
-        
-        # Render subdirectories
-        for d in dirs:
-            with st.expander(f"📁 {d.name}"):
-                render_directory(d, base_dir, depth + 1)
-                
-        # Render files
-        for f in files:
-            col1, col2, col3 = st.columns([3, 1, 1])
-            with col1:
-                st.markdown(f"📄 {f.name}")
-            with col2:
-                try:
-                    rel_path = f.relative_to("static")
-                    url_path = urllib.parse.quote(str(rel_path).replace("\\", "/"))
-                    file_url = f"/app/static/{url_path}"
-                    
-                    st.markdown(f'<a href="{file_url}" target="_blank"><button style="width: 100%; border-radius: 5px; padding: 0.25rem 0.5rem; background-color: transparent; border: 1px solid #ccc; color: inherit; cursor: pointer;">Download</button></a>', unsafe_allow_html=True)
-                except ValueError:
-                    st.write("N/A")
-            with col3:
-                if f.suffix.lower() in ['.mp4', '.webm', '.ogg', '.mp3', '.wav']:
-                    if st.button("Preview", key=f"preview_{f}"):
-                        st.session_state.preview_file = f
-    except Exception as e:
-        st.error(f"Error reading directory: {e}")
-
-def file_explorer_section():
-    st.header(t("File Explorer"))
-    with st.container(border=True):
-        from pathlib import Path
-        
-        # Define the base directory for exploration
-        base_dir = Path("static")
-        
-        if base_dir.exists():
-            render_directory(base_dir, base_dir)
-        else:
-            st.info("Directory not found or empty.")
-            
-        # Show preview if selected
-        if "preview_file" in st.session_state and st.session_state.preview_file.exists():
-            st.divider()
-            st.subheader("Preview")
-            preview_file = st.session_state.preview_file
-            st.markdown(f"**{preview_file.name}**")
-            
-            if preview_file.suffix.lower() in ['.mp4', '.webm', '.ogg']:
-                st.video(str(preview_file))
-            elif preview_file.suffix.lower() in ['.mp3', '.wav']:
-                st.audio(str(preview_file))
-            
-            if st.button("Close Preview", key="close_preview_btn"):
-                del st.session_state.preview_file
-                st.rerun()
-
 def main():
     logo_col, _ = st.columns([1,1])
     with logo_col:
@@ -195,6 +131,10 @@ def main():
     st.markdown(button_style, unsafe_allow_html=True)
     welcome_text = t("Hello, welcome to VideoLingo. If you encounter any issues, feel free to get instant answers with our Free QA Agent <a href=\"https://share.fastgpt.in/chat/share?shareId=066w11n3r9aq6879r4z0v9rh\" target=\"_blank\">here</a>! You can also try out our SaaS website at <a href=\"https://videolingo.io\" target=\"_blank\">videolingo.io</a> for free!")
     st.markdown(f"<p style='font-size: 20px; color: #808080;'>{welcome_text}</p>", unsafe_allow_html=True)
+    
+    # 提示用户文件浏览器已移至侧边栏
+    st.info(t("💡 You can now access the File Explorer from the sidebar on the left."))
+    
     # add settings
     with st.sidebar:
         page_setting()
@@ -202,7 +142,6 @@ def main():
     download_video_section()
     text_processing_section()
     audio_processing_section()
-    file_explorer_section()
 
 if __name__ == "__main__":
     main()
