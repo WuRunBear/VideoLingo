@@ -20,6 +20,11 @@ def custom_tts(text, save_path, number=None, task_df=None):
     # 拼接原语音参考路径
     ref_audio_path = f"{_AUDIO_REFERS_DIR}/{number}.wav" if number is not None else None
     
+    # 拼接原语音的远程访问链接 (基于 Streamlit 的静态文件服务)
+    # 假设你的服务运行在 http://localhost:8501
+    base_url = "http://localhost:8501/app/static" 
+    remote_ref_audio_url = f"{base_url}/output/audio/refers/{number}.wav" if number is not None else None
+    
     # 提取原语音对应的原始文本（提示词文本），这在某些克隆模型（如CosyVoice、GPT-SoVITS）中是必需的
     prompt_text = None
     if task_df is not None and number is not None:
@@ -35,7 +40,7 @@ def custom_tts(text, save_path, number=None, task_df=None):
     try:
         # TODO: Implement your custom TTS logic here
         # 1. Initialize your TTS client/model
-        # 2. Convert text to speech (use ref_audio_path if voice cloning is needed)
+        # 2. Convert text to speech (use ref_audio_path or remote_ref_audio_url if voice cloning is needed)
         # 3. Save the audio file to the specified path
         pass
         
