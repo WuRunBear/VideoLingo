@@ -1,5 +1,21 @@
 import streamlit as st
 import os, sys
+import mimetypes
+
+# Fix mime types for static serving in Linux
+mimetypes.add_type('video/mp4', '.mp4')
+mimetypes.add_type('video/webm', '.webm')
+mimetypes.add_type('video/ogg', '.ogg')
+mimetypes.add_type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx')
+mimetypes.add_type('application/zip', '.zip')
+mimetypes.add_type('text/plain', '.srt')
+mimetypes.add_type('application/json', '.json')
+mimetypes.add_type('audio/mpeg', '.mp3')
+mimetypes.add_type('audio/wav', '.wav')
+mimetypes.add_type('image/png', '.png')
+mimetypes.add_type('image/jpeg', '.jpg')
+mimetypes.add_type('image/svg+xml', '.svg')
+
 from core.st_utils.imports_and_utils import *
 from core import *
 
