@@ -59,7 +59,7 @@
     "Summarizing and translating...": "Summarizing and translating...",
     "Processing and aligning subtitles...": "Processing and aligning subtitles...",
     "Merging subtitles to video...": "Merging subtitles to video...",
-    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `output/log/terminology.json` to edit terminology. Then press ENTER to continue...",
+    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue...",
     "Subtitle processing complete! 🎉": "Subtitle processing complete! 🎉",
     "c. Dubbing": "c. Dubbing",
     "Generate audio tasks and chunks": "Generate audio tasks and chunks",
@@ -108,5 +108,8 @@
     "LLM JSON Format Support": "LLM JSON Format Support",
     "Enable if your LLM supports JSON mode output": "Enable if your LLM supports JSON mode output",
     "File Explorer": "File Explorer",
-    "💡 You can now access the File Explorer from the sidebar on the left.": "💡 You can now access the File Explorer from the sidebar on the left."
+    "💡 You can now access the File Explorer from the sidebar on the left.": "💡 You can now access the File Explorer from the sidebar on the left.",
+    "Download Translation Results": "Download Translation Results",
+    "Download Audio Tasks": "Download Audio Tasks",
+    "Download All Srt Files": "Download All Srt Files"
 }

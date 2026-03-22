@@ -59,7 +59,7 @@
     "Summarizing and translating...": "Resumiendo y traduciendo...",
     "Processing and aligning subtitles...": "Procesando y alineando subtítulos...",
     "Merging subtitles to video...": "Fusionando subtítulos al video...",
-    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ PAUSA_ANTES_DE_TRADUCIR. Vaya a `output/log/terminology.json` para editar la terminología. Luego presione ENTER para continuar...",
+    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ PAUSA_ANTES_DE_TRADUCIR. Vaya a `static/output/log/terminology.json` para editar la terminología. Luego presione ENTER para continuar...",
     "Subtitle processing complete! 🎉": "¡Procesamiento de subtítulos completado! 🎉",
     "c. Dubbing": "c. Doblaje",
     "Generate audio tasks and chunks": "Generar tareas y fragmentos de audio",

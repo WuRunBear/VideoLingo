@@ -45,7 +45,7 @@ If the command line is closed unexpectedly, language settings in `config.yaml` m
 
 ### Error Management
 
-- Failed files will be moved to the `output/ERROR` folder
+- Failed files will be moved to the `static/output/ERROR` folder
 - Error messages are recorded in the `Status` column of `tasks_setting.xlsx`
 - To retry:
   1. Move the single video folder from `ERROR` to the root directory

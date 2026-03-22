@@ -45,7 +45,7 @@
 
 ### 错误处理
 
-- 处理失败的文件会被移至 `output/ERROR` 文件夹
+- 处理失败的文件会被移至 `static/output/ERROR` 文件夹
 - 错误信息记录在 `tasks_setting.xlsx` 的 `Status` 列
 - 如需重试：
   1. 将 `ERROR` 下的单个视频文件夹移至根目录

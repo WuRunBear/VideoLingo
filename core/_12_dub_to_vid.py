@@ -48,7 +48,7 @@ def merge_video_audio():
         return
 
     # Normalize dub audio
-    normalized_dub_audio = 'output/normalized_dub.wav'
+    normalized_dub_audio = 'static/output/normalized_dub.wav'
     normalize_audio_volume(DUB_AUDIO, normalized_dub_audio)
     
     # Merge video and audio with translated subtitles

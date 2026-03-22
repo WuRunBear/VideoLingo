@@ -59,7 +59,7 @@
     "Summarizing and translating...": "正在總結和翻譯...",
     "Processing and aligning subtitles...": "正在處理和對齊字幕...",
     "Merging subtitles to video...": "正在將字幕合併到影片中...",
-    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ 翻譯前暫停。請前往`output/log/terminology.json`編輯術語。然後按Enter鍵繼續...",
+    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ 翻譯前暫停。請前往`static/output/log/terminology.json`編輯術語。然後按Enter鍵繼續...",
     "Subtitle processing complete! 🎉": "字幕處理完成! 🎉",
     "c. Dubbing": "c. 配音",
     "Generate audio tasks and chunks": "生成音頻任務和分塊",

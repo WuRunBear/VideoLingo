@@ -82,7 +82,7 @@
     "Summarizing and translating...": "Обобщение и перевод...",
     "Processing and aligning subtitles...": "Обработка и выравнивание субтитров...",
     "Merging subtitles to video...": "Объединение субтитров с видео...",
-    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ ПАУЗА_ПЕРЕД_ПЕРЕВОДОМ. Перейдите в `output/log/terminology.json` для редактирования терминологии. Затем нажмите ENTER для продолжения...",
+    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ ПАУЗА_ПЕРЕД_ПЕРЕВОДОМ. Перейдите в `static/output/log/terminology.json` для редактирования терминологии. Затем нажмите ENTER для продолжения...",
     "Subtitle processing complete! 🎉": "Обработка субтитров завершена! 🎉",
     "c. Dubbing": "c. Дубляж",
     "Generate audio tasks and chunks": "Создание аудио задач и фрагментов",

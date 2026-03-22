@@ -59,7 +59,7 @@
     "Summarizing and translating...": "要約と翻訳中...",
     "Processing and aligning subtitles...": "字幕の処理と整列中...",
     "Merging subtitles to video...": "字幕を動画に統合中...",
-    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ 翻訳前に一時停止。`output/log/terminology.json`で用語を編集してください。その後、Enterキーを押して続行...",
+    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ 翻訳前に一時停止。`static/output/log/terminology.json`で用語を編集してください。その後、Enterキーを押して続行...",
     "Subtitle processing complete! 🎉": "字幕処理完了！🎉",
     "c. Dubbing": "c. 吹き替え",
     "Generate audio tasks and chunks": "音声タスクとチャンクの生成",

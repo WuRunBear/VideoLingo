@@ -59,7 +59,7 @@
     "Summarizing and translating...": "正在总结和翻译...",
     "Processing and aligning subtitles...": "正在处理和对齐字幕...",
     "Merging subtitles to video...": "正在将字幕合并到视频...",
-    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ 翻译前暂停。请前往`output/log/terminology.json`编辑术语。然后按回车键继续...",
+    "⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue...": "⚠️ 翻译前暂停。请前往`static/output/log/terminology.json`编辑术语。然后按回车键继续...",
     "Subtitle processing complete! 🎉": "字幕处理完成! 🎉",
     "c. Dubbing": "c. 配音",
     "Generate audio tasks and chunks": "生成音频任务和分块",
@@ -108,6 +108,9 @@
     "LLM JSON Format Support": "LLM JSON格式支持",
     "Enable if your LLM supports JSON mode output": "如果选用的LLM支持JSON模式输出，请启用",
     "File Explorer": "文件浏览器",
-    "💡 You can now access the File Explorer from the sidebar on the left.": "💡 文件浏览器已经移至左侧边栏，你可以点击侧边栏进行访问。"
+    "💡 You can now access the File Explorer from the sidebar on the left.": "💡 文件浏览器已经移至左侧边栏，你可以点击侧边栏进行访问。",
+    "Download Translation Results": "下载翻译结果",
+    "Download Audio Tasks": "下载配音任务",
+    "Download All Srt Files": "下载所有字幕文件"
 }
 
