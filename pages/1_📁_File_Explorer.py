@@ -16,16 +16,39 @@ except Exception:
 st.title(t("File Explorer"))
 
 def render_directory(dir_path, base_dir, depth=0):
-    """Recursively render directories using st.expander"""
+    """Recursively render directories using st.expander, with true lazy loading"""
     try:
+        # Generate a unique key for this directory's expander
+        rel_path_str = str(dir_path.relative_to(base_dir))
+        expander_key = f"exp_{rel_path_str}_{depth}"
+        
+        # We only list directory contents if it's the root directory (depth==0) 
+        # or if the user has explicitly opened this expander (Streamlit 1.37+ allows passing expanded state to session_state, but here we use a button-based approach for true lazy loading)
+        
         items = list(dir_path.iterdir())
         dirs = sorted([d for d in items if d.is_dir()])
         files = sorted([f for f in items if f.is_file()])
         
         # Render subdirectories
         for d in dirs:
-            with st.expander(f"📁 {d.name}"):
+            dir_id = f"dir_{d.relative_to(base_dir)}"
+            
+            # Initialize state for this directory if not exists
+            if dir_id not in st.session_state:
+                st.session_state[dir_id] = False
+                
+            # Toggle button
+            icon = "📂" if not st.session_state[dir_id] else "📂" # You can change icon based on state
+            if st.button(f"{icon} {d.name}", key=f"btn_{dir_id}"):
+                st.session_state[dir_id] = not st.session_state[dir_id]
+                st.rerun()
+                
+            # If opened, recursively render its contents
+            if st.session_state[dir_id]:
+                # Indent contents
+                st.markdown(f"<div style='margin-left: {20}px;'>", unsafe_allow_html=True)
                 render_directory(d, base_dir, depth + 1)
+                st.markdown("</div>", unsafe_allow_html=True)
                 
         # Render files
         for f in files:
