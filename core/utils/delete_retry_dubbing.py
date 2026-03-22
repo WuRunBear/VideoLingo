@@ -3,8 +3,8 @@ import shutil
 
 def delete_dubbing_files():
     files_to_delete = [
-        os.path.join("output", "dub.wav"),
-        os.path.join("output", "output_dub.mp4")
+        os.path.join("static/output", "dub.wav"),
+        os.path.join("static/output", "output_dub.mp4")
     ]
     
     for file_path in files_to_delete:
@@ -17,7 +17,7 @@ def delete_dubbing_files():
         else:
             print(f"File not found: {file_path}")
     
-    segs_folder = os.path.join("output", "audio", "segs")
+    segs_folder = os.path.join("static/output", "audio", "segs")
     if os.path.exists(segs_folder):
         try:
             shutil.rmtree(segs_folder)

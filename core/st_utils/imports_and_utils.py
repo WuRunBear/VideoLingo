@@ -7,14 +7,15 @@ from translations.translations import translate as t
 
 def download_subtitle_zip_button(text: str):
     zip_buffer = io.BytesIO()
-    output_dir = "output"
-    
+    output_dir = "static/output"
+
     with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-        for file_name in os.listdir(output_dir):
-            if file_name.endswith(".srt"):
-                file_path = os.path.join(output_dir, file_name)
-                with open(file_path, "rb") as file:
-                    zip_file.writestr(file_name, file.read())
+        if os.path.exists(output_dir):
+            for file_name in os.listdir(output_dir):
+                if file_name.endswith(".srt"):
+                    file_path = os.path.join(output_dir, file_name)
+                    with open(file_path, "rb") as file:
+                        zip_file.writestr(file_name, file.read())
     
     zip_buffer.seek(0)
     
