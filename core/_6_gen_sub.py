@@ -58,6 +58,7 @@ def show_difference(str1, str2):
 
 def get_sentence_timestamps(df_words, df_sentences):
     time_stamp_list = []
+    speaker_list = []
     
     # Build complete string and position mapping
     full_words_str = ''
@@ -86,6 +87,20 @@ def get_sentence_timestamps(df_words, df_sentences):
                     float(df_words['end'][end_word_idx])
                 ))
                 
+                # Extract speakers for words in this range
+                speakers = []
+                if 'speaker_id' in df_words.columns:
+                    for w_idx in range(start_word_idx, end_word_idx + 1):
+                        spk = df_words['speaker_id'].iloc[w_idx]
+                        if pd.notna(spk):
+                            speakers.append(spk)
+                if speakers:
+                    from collections import Counter
+                    most_common_speaker = Counter(speakers).most_common(1)[0][0]
+                    speaker_list.append(most_common_speaker)
+                else:
+                    speaker_list.append(None)
+
                 current_pos += sentence_len
                 match_found = True
                 break
@@ -98,7 +113,7 @@ def get_sentence_timestamps(df_words, df_sentences):
             print("\nOriginal sentence:", df_sentences['Source'][idx])
             raise ValueError("❎ No match found for sentence.")
     
-    return time_stamp_list
+    return time_stamp_list, speaker_list
 
 def align_timestamp(df_text, df_translate, subtitle_output_configs: list, output_dir: str, for_display: bool = True):
     """Align timestamps and add a new timestamp column to df_translate"""
@@ -110,8 +125,9 @@ def align_timestamp(df_text, df_translate, subtitle_output_configs: list, output
     words['id'] = words['id'].astype(int)
 
     # Process timestamps ⏰
-    time_stamp_list = get_sentence_timestamps(df_text, df_translate)
+    time_stamp_list, speaker_list = get_sentence_timestamps(df_text, df_translate)
     df_trans_time['timestamp'] = time_stamp_list
+    df_trans_time['speaker_id'] = speaker_list
     df_trans_time['duration'] = df_trans_time['timestamp'].apply(lambda x: x[1] - x[0])
 
     # Remove gaps 🕳️
@@ -137,6 +153,8 @@ def align_timestamp(df_text, df_translate, subtitle_output_configs: list, output
             subtitle_str = generate_subtitle_string(df_trans_time, columns)
             with open(os.path.join(output_dir, filename), 'w', encoding='utf-8') as f:
                 f.write(subtitle_str)
+        if output_dir == _AUDIO_DIR:
+            df_trans_time.to_excel(os.path.join(output_dir, 'audio_sub_with_speaker.xlsx'), index=False)
     
     return df_trans_time
 

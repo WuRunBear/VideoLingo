@@ -138,6 +138,29 @@ def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
     torch.cuda.empty_cache()
     del model_a
 
+    # -------------------------
+    # 3. Diarization (speaker assignment)
+    # -------------------------
+    try:
+        try:
+            hf_token = load_key("whisper.hf_token")
+        except Exception:
+            hf_token = None
+        if not hf_token:
+            hf_token = os.environ.get("HF_TOKEN", "")
+        
+        if hf_token:
+            rprint("[cyan]👥 Starting Speaker Diarization...[/cyan]")
+            diarize_model = whisperx.DiarizationPipeline(use_auth_token=hf_token, device=device)
+            diarize_segments = diarize_model(vocal_audio_file)
+            result = whisperx.assign_word_speakers(diarize_segments, result)
+            del diarize_model
+            torch.cuda.empty_cache()
+        else:
+            rprint("[yellow]⚠️ Skipping Speaker Diarization because HF_TOKEN is not set in config or environment. If you need speaker distinction, please set whisper.hf_token in config.yaml[/yellow]")
+    except Exception as e:
+        rprint(f"[red]⚠️ Diarization failed: {e}[/red]")
+
     # Adjust timestamps
     for segment in result['segments']:
         segment['start'] += start

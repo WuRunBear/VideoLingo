@@ -61,6 +61,13 @@ def process_srt():
     subtitles = []
     src_subtitles = {}
     
+    speaker_file = 'static/output/audio/audio_sub_with_speaker.xlsx'
+    speaker_dict = {}
+    if os.path.exists(speaker_file):
+        df_spk = pd.read_excel(speaker_file)
+        for idx, row in df_spk.iterrows():
+            speaker_dict[idx + 1] = row.get('speaker_id', None)
+
     for block in src_content.strip().split('\n\n'):
         lines = [line.strip() for line in block.split('\n') if line.strip()]
         if len(lines) < 3:
@@ -91,11 +98,14 @@ def process_srt():
             # Add the original text from src_subs_for_audio.srt
             origin = src_subtitles.get(number, '')
 
+            # Get speaker_id
+            speaker_id = speaker_dict.get(number, None)
+
         except ValueError as e:
             rprint(Panel(f"Unable to parse subtitle block '{block}', error: {str(e)}, skipping this subtitle block.", title="Error", border_style="red"))
             continue
         
-        subtitles.append({'number': number, 'start_time': start_time, 'end_time': end_time, 'duration': duration, 'text': text, 'origin': origin})
+        subtitles.append({'number': number, 'start_time': start_time, 'end_time': end_time, 'duration': duration, 'text': text, 'origin': origin, 'speaker_id': speaker_id})
     
     df = pd.DataFrame(subtitles)
     
@@ -104,7 +114,13 @@ def process_srt():
     while i < len(df):
         today = datetime.date.today()
         if df.loc[i, 'duration'] < MIN_SUB_DUR:
-            if i < len(df) - 1 and time_diff_seconds(df.loc[i, 'start_time'],df.loc[i+1, 'start_time'],today) < MIN_SUB_DUR:
+            spk1 = df.loc[i, 'speaker_id'] if 'speaker_id' in df.columns else None
+            spk2 = df.loc[i+1, 'speaker_id'] if (i < len(df) - 1 and 'speaker_id' in df.columns) else None
+            same_speaker = True
+            if pd.notna(spk1) and pd.notna(spk2) and spk1 != spk2:
+                same_speaker = False
+
+            if i < len(df) - 1 and time_diff_seconds(df.loc[i, 'start_time'],df.loc[i+1, 'start_time'],today) < MIN_SUB_DUR and same_speaker:
                 rprint(f"[bold yellow]Merging subtitles {i+1} and {i+2}[/bold yellow]")
                 df.loc[i, 'text'] += ' ' + df.loc[i+1, 'text']
                 df.loc[i, 'origin'] += ' ' + df.loc[i+1, 'origin']
