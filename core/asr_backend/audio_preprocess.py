@@ -125,6 +125,9 @@ def process_transcription(result: Dict) -> pd.DataFrame:
         speaker_id = segment.get('speaker_id', None)
         
         for word in segment['words']:
+            # For 302 API with diarize mode, speaker might be assigned at the word level
+            word_speaker = word.get('speaker', speaker_id)
+            
             # Check word length
             if len(word["word"]) > 30:
                 rprint(f"[yellow]⚠️ Warning: Detected word longer than 30 characters, skipping: {word['word']}[/yellow]")
@@ -140,7 +143,7 @@ def process_transcription(result: Dict) -> pd.DataFrame:
                         'text': word["word"],
                         'start': all_words[-1]['end'],
                         'end': all_words[-1]['end'],
-                        'speaker_id': speaker_id
+                        'speaker_id': word_speaker
                     }
                     all_words.append(word_dict)
                 else:
@@ -151,7 +154,7 @@ def process_transcription(result: Dict) -> pd.DataFrame:
                             'text': word["word"],
                             'start': next_word["start"],
                             'end': next_word["end"],
-                            'speaker_id': speaker_id
+                            'speaker_id': word_speaker
                         }
                         all_words.append(word_dict)
                     else:
@@ -162,7 +165,7 @@ def process_transcription(result: Dict) -> pd.DataFrame:
                     'text': f'{word["word"]}',
                     'start': word.get('start', all_words[-1]['end'] if all_words else 0),
                     'end': word['end'],
-                    'speaker_id': speaker_id
+                    'speaker_id': word_speaker
                 }
                 
                 all_words.append(word_dict)
