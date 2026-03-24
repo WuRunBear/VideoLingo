@@ -175,4 +175,4 @@ installer_files/
 logs/
 
 static
-core/tts_backend/custom_tts.py
+core/tts_backend/custom_tts*.py
