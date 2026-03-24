@@ -19,7 +19,7 @@ def cleanup(history_dir="static/history"):
     """
     # 获取视频文件名
     video_file = find_video_files()
-    video_name = video_file.split("/")[1]
+    video_name = os.path.basename(video_file)
     video_name = os.path.splitext(video_name)[0]
     video_name = sanitize_filename(video_name)
     
@@ -38,8 +38,10 @@ def cleanup(history_dir="static/history"):
     # 创建视频专属历史记录目录及子目录
     log_dir = os.path.join(video_history_dir, "log")
     gpt_log_dir = os.path.join(video_history_dir, "gpt_log")
+    audio_dir = os.path.join(video_history_dir, "audio")
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(gpt_log_dir, exist_ok=True)
+    os.makedirs(audio_dir, exist_ok=True)
 
     # 移动非日志文件
     for file in glob.glob("static/output/*"):
@@ -54,10 +56,15 @@ def cleanup(history_dir="static/history"):
     for file in glob.glob("static/output/gpt_log/*"):
         move_file(file, gpt_log_dir)
 
+    # 移动audio文件
+    for file in glob.glob("static/output/audio/*"):
+        move_file(file, audio_dir)
+
     # 删除空的输出目录
     try:
         os.rmdir("static/output/log")
         os.rmdir("static/output/gpt_log")
+        os.rmdir("static/output/audio")
         os.rmdir("static/output")
     except OSError:
         pass  # 忽略删除目录时的错误
