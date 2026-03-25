@@ -151,7 +151,8 @@ def transcribe_audio(raw_audio_file, vocal_audio_file, start, end):
         
         if hf_token:
             rprint("[cyan]👥 Starting Speaker Diarization...[/cyan]")
-            diarize_model = whisperx.DiarizationPipeline(use_auth_token=hf_token, device=device)
+            from whisperx.diarize import DiarizationPipeline
+            diarize_model = DiarizationPipeline(token=hf_token, device=device)
             diarize_segments = diarize_model(vocal_audio_file)
             result = whisperx.assign_word_speakers(diarize_segments, result)
             del diarize_model

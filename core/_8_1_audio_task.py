@@ -131,10 +131,19 @@ def process_srt():
                 df = df.drop(i+1).reset_index(drop=True)
             else:
                 if i < len(df) - 1:  # Not the last audio
-                    rprint(f"[bold blue]Extending subtitle {i+1} duration to {MIN_SUB_DUR} seconds[/bold blue]")
-                    df.loc[i, 'end_time'] = (datetime.datetime.combine(today, df.loc[i, 'start_time']) + 
-                                            datetime.timedelta(seconds=MIN_SUB_DUR)).time()
-                    df.loc[i, 'duration'] = MIN_SUB_DUR
+                    # Check if extending overlaps with the next subtitle
+                    max_end_time = df.loc[i+1, 'start_time']
+                    proposed_end_time = (datetime.datetime.combine(today, df.loc[i, 'start_time']) + 
+                                        datetime.timedelta(seconds=MIN_SUB_DUR)).time()
+                    
+                    if proposed_end_time > max_end_time:
+                        rprint(f"[bold blue]Extending subtitle {i+1} duration to {time_diff_seconds(df.loc[i, 'start_time'], max_end_time, today):.2f} seconds (limited by next subtitle)[/bold blue]")
+                        df.loc[i, 'end_time'] = max_end_time
+                        df.loc[i, 'duration'] = time_diff_seconds(df.loc[i, 'start_time'], max_end_time, today)
+                    else:
+                        rprint(f"[bold blue]Extending subtitle {i+1} duration to {MIN_SUB_DUR} seconds[/bold blue]")
+                        df.loc[i, 'end_time'] = proposed_end_time
+                        df.loc[i, 'duration'] = MIN_SUB_DUR
                 else:
                     rprint(f"[bold red]The last subtitle {i+1} duration is less than {MIN_SUB_DUR} seconds, but not extending[/bold red]")
                 i += 1
