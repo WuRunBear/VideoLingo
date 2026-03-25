@@ -95,14 +95,10 @@ def merge_audio_segments(audios, new_sub_times, sample_rate):
             start_time, end_time = time_range
             
             # Add silence segment
-            if i > 0:
-                prev_end = new_sub_times[i-1][1]
-                silence_duration = start_time - prev_end
-                if silence_duration > 0:
-                    silence = AudioSegment.silent(duration=int(silence_duration * 1000), frame_rate=sample_rate)
-                    merged_audio += silence
-            elif start_time > 0:
-                silence = AudioSegment.silent(duration=int(start_time * 1000), frame_rate=sample_rate)
+            current_audio_len = len(merged_audio) / 1000.0
+            silence_duration = start_time - current_audio_len
+            if silence_duration > 0:
+                silence = AudioSegment.silent(duration=int(silence_duration * 1000), frame_rate=sample_rate)
                 merged_audio += silence
                 
             merged_audio += audio_segment

@@ -111,6 +111,20 @@
     "💡 You can now access the File Explorer from the sidebar on the left.": "💡 文件浏览器已经移至左侧边栏，你可以点击侧边栏进行访问。",
     "Download Translation Results": "下载翻译结果",
     "Download Audio Tasks": "下载配音任务",
-    "Download All Srt Files": "下载所有字幕文件"
+    "Download All Srt Files": "下载所有字幕文件",
+    "b. Sentence Segmentation": "b. 句子分段",
+    "This stage extracts speech and splits it into sentences. You can manually edit the split result before translation.": "此阶段会提取语音并进行句子分段。你可以在翻译前对分段结果进行人工修改。",
+    "Run Sentence Segmentation": "开始句子分段",
+    "Sentence segmentation complete": "句子分段完成",
+    "Download split results": "下载分段结果",
+    "Manual step: edit `static/output/log/split_by_meaning.txt` if needed, then click the confirm button below to continue.": "人工干预：如需修改，请编辑 `static/output/log/split_by_meaning.txt`，然后点击下方确认按钮继续。",
+    "I have confirmed the split results, continue to translation": "我已确认/编辑完成，继续翻译",
+    "Confirmed. You can now run translation in step c.": "已确认，现在可以在步骤 c 执行翻译。",
+    "Split result file not found. Please run sentence segmentation first.": "未找到分段结果文件，请先执行句子分段。",
+    "c. Translate and Generate Subtitles": "c. 翻译并生成字幕",
+    "Please finish step b (Sentence Segmentation) first.": "请先完成步骤 b（句子分段）。",
+    "Please confirm the split results in step b before running translation.": "请先在步骤 b 确认分段结果，再执行翻译。",
+    "Start Translation and Subtitle Generation": "开始翻译并生成字幕",
+    "d. Dubbing": "d. 配音"
 }
 

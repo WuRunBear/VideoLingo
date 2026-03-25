@@ -29,24 +29,67 @@ st.set_page_config(page_title="VideoLingo", page_icon="docs/logo.svg")
 SUB_VIDEO = "static/output/output_sub.mp4"
 DUB_VIDEO = "static/output/output_dub.mp4"
 
-def text_processing_section():
-    st.header(t("b. Translate and Generate Subtitles"))
+def sentence_segmentation_section():
+    st.header(t("b. Sentence Segmentation"))
+    with st.container(border=True):
+        st.markdown(f"""
+        <p style='font-size: 20px;'>
+        {t("This stage extracts speech and splits it into sentences. You can manually edit the split result before translation.")}
+        """, unsafe_allow_html=True)
+
+        split_file = "static/output/log/split_by_meaning.txt"
+
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button(t("Run Sentence Segmentation"), key="run_segmentation_btn"):
+                with st.spinner(t("Using Whisper for transcription...")):
+                    _2_asr.transcribe()
+                with st.spinner(t("Splitting long sentences...")):
+                    _3_1_split_nlp.split_by_spacy()
+                    _3_2_split_meaning.split_sentences_by_meaning()
+                st.session_state.segmentation_confirmed = False
+                st.success(t("Sentence segmentation complete"))
+                st.rerun()
+
+        if os.path.exists(split_file):
+            st.download_button(
+                label="📥 " + t("Download split results"),
+                data=open(split_file, "rb"),
+                file_name="split_by_meaning.txt",
+                mime="text/plain",
+                use_container_width=True,
+            )
+            st.info(t("Manual step: edit `static/output/log/split_by_meaning.txt` if needed, then click the confirm button below to continue."))
+
+            if st.button(t("I have confirmed the split results, continue to translation"), key="confirm_segmentation_btn"):
+                st.session_state.segmentation_confirmed = True
+                st.success(t("Confirmed. You can now run translation in step c."))
+        else:
+            st.warning(t("Split result file not found. Please run sentence segmentation first."))
+
+def translation_and_subtitle_section():
+    st.header(t("c. Translate and Generate Subtitles"))
     with st.container(border=True):
         st.markdown(f"""
         <p style='font-size: 20px;'>
         {t("This stage includes the following steps:")}
         <p style='font-size: 20px;'>
-            1. {t("WhisperX word-level transcription")}<br>
-            2. {t("Sentence segmentation using NLP and LLM")}<br>
-            3. {t("Summarization and multi-step translation")}<br>
-            4. {t("Cutting and aligning long subtitles")}<br>
-            5. {t("Generating timeline and subtitles")}<br>
-            6. {t("Merging subtitles into the video")}
+            1. {t("Summarization and multi-step translation")}<br>
+            2. {t("Cutting and aligning long subtitles")}<br>
+            3. {t("Generating timeline and subtitles")}<br>
+            4. {t("Merging subtitles into the video")}
         """, unsafe_allow_html=True)
 
         if not os.path.exists(SUB_VIDEO):
-            if st.button(t("Start Processing Subtitles"), key="text_processing_button"):
-                process_text()
+            if not os.path.exists("static/output/log/split_by_meaning.txt"):
+                st.info(t("Please finish step b (Sentence Segmentation) first."))
+                return
+            if not st.session_state.get("segmentation_confirmed", False):
+                st.info(t("Please confirm the split results in step b before running translation."))
+                return
+
+            if st.button(t("Start Translation and Subtitle Generation"), key="translation_processing_button"):
+                process_translation_and_subtitles()
                 st.rerun()
         else:
             if load_key("burn_subtitles"):
@@ -67,16 +110,9 @@ def text_processing_section():
                 st.rerun()
             return True
 
-def process_text():
-    with st.spinner(t("Using Whisper for transcription...")):
-        _2_asr.transcribe()
-    with st.spinner(t("Splitting long sentences...")):  
-        _3_1_split_nlp.split_by_spacy()
-        _3_2_split_meaning.split_sentences_by_meaning()
+def process_translation_and_subtitles():
     with st.spinner(t("Summarizing and translating...")):
         _4_1_summarize.get_summary()
-        if load_key("pause_before_translate"):
-            input(t("⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue..."))
         _4_2_translate.translate_all()
     with st.spinner(t("Processing and aligning subtitles...")): 
         _5_split_sub.split_for_sub_main()
@@ -88,7 +124,7 @@ def process_text():
     st.balloons()
 
 def audio_processing_section():
-    st.header(t("c. Dubbing"))
+    st.header(t("d. Dubbing"))
     with st.container(border=True):
         st.markdown(f"""
         <p style='font-size: 20px;'>
@@ -156,7 +192,8 @@ def main():
         page_setting()
         st.markdown(give_star_button, unsafe_allow_html=True)
     download_video_section()
-    text_processing_section()
+    sentence_segmentation_section()
+    translation_and_subtitle_section()
     audio_processing_section()
 
 if __name__ == "__main__":

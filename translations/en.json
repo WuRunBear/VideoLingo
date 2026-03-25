@@ -111,5 +111,19 @@
     "💡 You can now access the File Explorer from the sidebar on the left.": "💡 You can now access the File Explorer from the sidebar on the left.",
     "Download Translation Results": "Download Translation Results",
     "Download Audio Tasks": "Download Audio Tasks",
-    "Download All Srt Files": "Download All Srt Files"
+    "Download All Srt Files": "Download All Srt Files",
+    "b. Sentence Segmentation": "b. Sentence Segmentation",
+    "This stage extracts speech and splits it into sentences. You can manually edit the split result before translation.": "This stage extracts speech and splits it into sentences. You can manually edit the split result before translation.",
+    "Run Sentence Segmentation": "Run Sentence Segmentation",
+    "Sentence segmentation complete": "Sentence segmentation complete",
+    "Download split results": "Download split results",
+    "Manual step: edit `static/output/log/split_by_meaning.txt` if needed, then click the confirm button below to continue.": "Manual step: edit `static/output/log/split_by_meaning.txt` if needed, then click the confirm button below to continue.",
+    "I have confirmed the split results, continue to translation": "I have confirmed the split results, continue to translation",
+    "Confirmed. You can now run translation in step c.": "Confirmed. You can now run translation in step c.",
+    "Split result file not found. Please run sentence segmentation first.": "Split result file not found. Please run sentence segmentation first.",
+    "c. Translate and Generate Subtitles": "c. Translate and Generate Subtitles",
+    "Please finish step b (Sentence Segmentation) first.": "Please finish step b (Sentence Segmentation) first.",
+    "Please confirm the split results in step b before running translation.": "Please confirm the split results in step b before running translation.",
+    "Start Translation and Subtitle Generation": "Start Translation and Subtitle Generation",
+    "d. Dubbing": "d. Dubbing"
 }

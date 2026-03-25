@@ -201,6 +201,23 @@ def merge_chunks(tasks_df: pd.DataFrame) -> pd.DataFrame:
                     tasks_df.at[index, 'new_sub_times'] = last_times
                 else:
                     raise Exception(f"Chunk {chunk_start} to {index} exceeds the chunk end time {chunk_end_time:.2f} seconds with current time {cur_time:.2f} seconds")
+            
+            # 🎯 Step6: Extend subtitle display time to fill gaps and reach original end time
+            orig_chunk_end_time = parse_df_srt_time(chunk_df.iloc[-1]['end_time'])
+            
+            all_times_in_chunk = []
+            for i in range(chunk_start, index + 1):
+                times = tasks_df.at[i, 'new_sub_times']
+                if times:
+                    for t in times:
+                        all_times_in_chunk.append(t)
+            
+            for i in range(len(all_times_in_chunk) - 1):
+                all_times_in_chunk[i][1] = all_times_in_chunk[i+1][0]
+                
+            if all_times_in_chunk:
+                all_times_in_chunk[-1][1] = max(all_times_in_chunk[-1][1], orig_chunk_end_time)
+
             chunk_start = index+1
     
     rprint("[bold green]✅ Audio chunks processing completed![/bold green]")
