@@ -125,9 +125,13 @@ def align_timestamp(df_text, df_translate, subtitle_output_configs: list, output
     words['id'] = words['id'].astype(int)
 
     # Process timestamps ⏰
-    time_stamp_list, speaker_list = get_sentence_timestamps(df_text, df_translate)
+    time_stamp_list, inferred_speaker_list = get_sentence_timestamps(df_text, df_translate)
     df_trans_time['timestamp'] = time_stamp_list
-    df_trans_time['speaker_id'] = speaker_list
+    if 'speaker_id' in df_trans_time.columns:
+        inferred_series = pd.Series(inferred_speaker_list, index=df_trans_time.index)
+        df_trans_time['speaker_id'] = df_trans_time['speaker_id'].where(df_trans_time['speaker_id'].notna(), inferred_series)
+    else:
+        df_trans_time['speaker_id'] = inferred_speaker_list
     df_trans_time['duration'] = df_trans_time['timestamp'].apply(lambda x: x[1] - x[0])
 
     # Remove gaps 🕳️
@@ -177,6 +181,14 @@ def align_timestamp_main():
     # for audio
     df_translate_for_audio = pd.read_excel(_5_REMERGED) # use remerged file to avoid unmatched lines when dubbing
     df_translate_for_audio['Translation'] = df_translate_for_audio['Translation'].apply(clean_translation)
+    speaker_mapping_locked = "static/output/log/speaker_mapping_locked.xlsx"
+    if os.path.exists(speaker_mapping_locked):
+        try:
+            df_map = pd.read_excel(speaker_mapping_locked)
+            if 'speaker_id' in df_map.columns and len(df_map) == len(df_translate_for_audio):
+                df_translate_for_audio['speaker_id'] = df_map['speaker_id'].values
+        except Exception:
+            pass
     
     align_timestamp(df_text, df_translate_for_audio, AUDIO_SUBTITLE_OUTPUT_CONFIGS, _AUDIO_DIR)
     console.print(Panel(f"[bold green]🎉📝 Audio subtitles generation completed! Please check in the `{_AUDIO_DIR}` folder 👀[/bold green]"))

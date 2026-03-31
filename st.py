@@ -18,6 +18,7 @@ mimetypes.add_type('image/svg+xml', '.svg')
 import streamlit as st
 from core.st_utils.imports_and_utils import *
 from core import *
+from core.utils.models import _2_CLEANED_CHUNKS
 
 # SET PATH
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,9 +29,11 @@ st.set_page_config(page_title="VideoLingo", page_icon="docs/logo.svg")
 
 SUB_VIDEO = "static/output/output_sub.mp4"
 DUB_VIDEO = "static/output/output_dub.mp4"
+SPEAKER_MAPPING_DRAFT = "static/output/log/speaker_mapping_draft.xlsx"
+SPEAKER_MAPPING_LOCKED = "static/output/log/speaker_mapping_locked.xlsx"
 
-def text_processing_section():
-    st.header(t("b. Translate and Generate Subtitles"))
+def mapping_section():
+    st.header("b. 句子与说话人确认")
     with st.container(border=True):
         st.markdown(f"""
         <p style='font-size: 20px;'>
@@ -38,21 +41,103 @@ def text_processing_section():
         <p style='font-size: 20px;'>
             1. {t("WhisperX word-level transcription")}<br>
             2. {t("Sentence segmentation using NLP and LLM")}<br>
-            3. {t("Summarization and multi-step translation")}<br>
-            4. {t("Cutting and aligning long subtitles")}<br>
-            5. {t("Generating timeline and subtitles")}<br>
-            6. {t("Merging subtitles into the video")}
+            3. 生成 speaker_mapping_draft.xlsx（每行一句）<br>
+            4. 手动拆分/合并与修正 speaker_id<br>
+            5. 锁定后进入翻译与字幕生成
         """, unsafe_allow_html=True)
 
+        if not os.path.exists(SPEAKER_MAPPING_LOCKED):
+            if not os.path.exists(SPEAKER_MAPPING_DRAFT):
+                if st.button("开始转写并生成草稿", key="mapping_generate_draft"):
+                    process_asr_and_mapping_draft()
+                    st.rerun()
+            else:
+                st.download_button(
+                    label="📥 下载 speaker_mapping_draft.xlsx",
+                    data=open(SPEAKER_MAPPING_DRAFT, "rb"),
+                    file_name="speaker_mapping_draft.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+                with st.form("mapping_upload_draft_form"):
+                    uploaded = st.file_uploader(
+                        "上传新的 speaker_mapping_draft.xlsx",
+                        type=["xlsx"],
+                        key="mapping_upload_draft"
+                    )
+                    save_uploaded = st.form_submit_button("保存上传的草稿", use_container_width=True)
+                if save_uploaded:
+                    if uploaded is None:
+                        st.error("请先选择一个 xlsx 文件再保存。")
+                    else:
+                        os.makedirs(os.path.dirname(SPEAKER_MAPPING_DRAFT), exist_ok=True)
+                        with open(SPEAKER_MAPPING_DRAFT, "wb") as f:
+                            f.write(uploaded.getvalue())
+                        st.success("已上传并替换 speaker_mapping_draft.xlsx")
+                with st.form("upload_cleaned_chunks_form"):
+                    uploaded_chunks = st.file_uploader(
+                        "上传新的 cleaned_chunks.xlsx（覆盖词级时间）",
+                        type=["xlsx"],
+                        key="upload_cleaned_chunks"
+                    )
+                    save_chunks = st.form_submit_button("保存 cleaned_chunks.xlsx", use_container_width=True)
+                if save_chunks:
+                    if uploaded_chunks is None:
+                        st.error("请先选择一个 xlsx 文件再保存。")
+                    else:
+                        os.makedirs(os.path.dirname(_2_CLEANED_CHUNKS), exist_ok=True)
+                        with open(_2_CLEANED_CHUNKS, "wb") as f:
+                            f.write(uploaded_chunks.getvalue())
+                        st.success("已上传并替换 cleaned_chunks.xlsx")
+                st.info("请对照视频编辑 speaker_mapping_draft.xlsx（拆分/合并/修正 speaker_id），完成后点击“锁定映射并继续”。")
+                if st.button("锁定映射并继续", key="mapping_lock"):
+                    _3_3_speaker_mapping.lock_speaker_mapping()
+                    st.rerun()
+        else:
+            st.success("speaker_mapping_locked.xlsx 已就绪，可以开始翻译与字幕生成。")
+            st.download_button(
+                label="📥 下载 speaker_mapping_locked.xlsx",
+                data=open(SPEAKER_MAPPING_LOCKED, "rb"),
+                file_name="speaker_mapping_locked.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+
+def process_asr_and_mapping_draft():
+    with st.spinner(t("Using Whisper for transcription...")):
+        _2_asr.transcribe()
+    with st.spinner(t("Splitting long sentences...")):
+        _3_1_split_nlp.split_by_spacy()
+        _3_2_split_meaning.split_sentences_by_meaning()
+    with st.spinner("Generating speaker mapping draft..."):
+        _3_3_speaker_mapping.generate_speaker_mapping_draft()
+
+def translate_processing_section():
+    st.header(t("c. Translate and Generate Subtitles"))
+    with st.container(border=True):
+        st.markdown(f"""
+        <p style='font-size: 20px;'>
+        {t("This stage includes the following steps:")}
+        <p style='font-size: 20px;'>
+            1. {t("Summarization and multi-step translation")}<br>
+            2. {t("Cutting and aligning long subtitles")}<br>
+            3. {t("Generating timeline and subtitles")}<br>
+            4. {t("Merging subtitles into the video")}
+        """, unsafe_allow_html=True)
+
+        if not os.path.exists(SPEAKER_MAPPING_LOCKED):
+            st.warning("请先完成 b 阶段：句子与说话人确认。")
+            return
+
         if not os.path.exists(SUB_VIDEO):
-            if st.button(t("Start Processing Subtitles"), key="text_processing_button"):
-                process_text()
+            if st.button(t("Start Processing Subtitles"), key="translate_processing_button"):
+                process_translate_and_subtitles()
                 st.rerun()
         else:
             if load_key("burn_subtitles"):
                 st.video(SUB_VIDEO)
             download_subtitle_zip_button(text=t("Download All Srt Files"))
-            
+
             if os.path.exists("static/output/log/translation_results.xlsx"):
                 st.download_button(
                     label="📥 " + t("Download Translation Results"),
@@ -61,34 +146,29 @@ def text_processing_section():
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
-            
-            if st.button(t("Archive to 'history'"), key="cleanup_in_text_processing"):
+
+            if st.button(t("Archive to 'history'"), key="cleanup_in_translate_processing"):
                 cleanup()
                 st.rerun()
             return True
 
-def process_text():
-    with st.spinner(t("Using Whisper for transcription...")):
-        _2_asr.transcribe()
-    with st.spinner(t("Splitting long sentences...")):  
-        _3_1_split_nlp.split_by_spacy()
-        _3_2_split_meaning.split_sentences_by_meaning()
+def process_translate_and_subtitles():
     with st.spinner(t("Summarizing and translating...")):
         _4_1_summarize.get_summary()
         if load_key("pause_before_translate"):
             input(t("⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue..."))
         _4_2_translate.translate_all()
-    with st.spinner(t("Processing and aligning subtitles...")): 
+    with st.spinner(t("Processing and aligning subtitles...")):
         _5_split_sub.split_for_sub_main()
         _6_gen_sub.align_timestamp_main()
     with st.spinner(t("Merging subtitles to video...")):
         _7_sub_into_vid.merge_subtitles_to_video()
-    
+
     st.success(t("Subtitle processing complete! 🎉"))
     st.balloons()
 
 def audio_processing_section():
-    st.header(t("c. Dubbing"))
+    st.header(t("d. Dubbing"))
     with st.container(border=True):
         st.markdown(f"""
         <p style='font-size: 20px;'>
@@ -156,7 +236,8 @@ def main():
         page_setting()
         st.markdown(give_star_button, unsafe_allow_html=True)
     download_video_section()
-    text_processing_section()
+    mapping_section()
+    translate_processing_section()
     audio_processing_section()
 
 if __name__ == "__main__":

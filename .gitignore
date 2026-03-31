@@ -174,5 +174,6 @@ dev/
 installer_files/
 logs/
 
-static
+static/history
+static/output
 core/tts_backend/custom_tts*.py

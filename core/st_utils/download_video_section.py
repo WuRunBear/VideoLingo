@@ -5,6 +5,7 @@ import subprocess
 from time import sleep
 
 import streamlit as st
+import streamlit.components.v1 as components
 from core._1_ytdlp import download_video_ytdlp, find_video_files
 from core.utils import *
 from translations.translations import translate as t
@@ -17,6 +18,58 @@ def download_video_section():
         try:
             video_file = find_video_files()
             st.video(video_file)
+            video_name = os.path.basename(video_file)
+            components.html(
+                f"""
+                <div style="display:flex; gap:8px; align-items:center; margin-top: 8px;">
+                  <input id="vl_copy_link" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;"
+                         value="" readonly />
+                  <button id="vl_copy_btn" style="padding:8px 12px; border:1px solid #ddd; border-radius:6px; background:white; cursor:pointer;">
+                    复制链接
+                  </button>
+                </div>
+                <div id="vl_copy_msg" style="margin-top:6px; font-size:12px; color:#666;"></div>
+                <script>
+                  const fileName = {video_name!r};
+                  let origin = "null";
+                  try {{
+                    origin = new URL(document.baseURI).origin;
+                  }} catch (e) {{
+                    origin = window.location.origin;
+                  }}
+                  const link = `${{origin}}/staticfile/output/${{encodeURIComponent(fileName)}}`;
+                  const input = document.getElementById("vl_copy_link");
+                  const msg = document.getElementById("vl_copy_msg");
+                  input.value = link;
+                  async function copyText(text) {{
+                    try {{
+                      await navigator.clipboard.writeText(text);
+                      return true;
+                    }} catch (e) {{
+                      try {{
+                        const ta = document.createElement("textarea");
+                        ta.value = text;
+                        ta.style.position = "fixed";
+                        ta.style.left = "-9999px";
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        const ok = document.execCommand("copy");
+                        document.body.removeChild(ta);
+                        return ok;
+                      }} catch (e2) {{
+                        return false;
+                      }}
+                    }}
+                  }}
+                  document.getElementById("vl_copy_btn").addEventListener("click", async () => {{
+                    const ok = await copyText(link);
+                    msg.textContent = ok ? "已复制" : "复制失败，请手动复制";
+                  }});
+                </script>
+                """,
+                height=90,
+            )
             if st.button(t("Delete and Reselect"), key="delete_video_button"):
                 os.remove(video_file)
                 if os.path.exists(OUTPUT_DIR):

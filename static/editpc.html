@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>字幕精修工作站 v3.7 (拆分逻辑彻底修复版)</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/regions.min.js"></script>
+    <style>
+        .active-row { background-color: #fef3c7; border-left: 4px solid #f59e0b; box-shadow: inset 0 0 10px rgba(245, 158, 11, 0.05); }
+        .word-chip { transition: all 0.1s; border: 1px solid #e2e8f0; }
+        #waveform { background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-hidden font-sans text-sm">
+
+<div id="app" class="h-screen flex flex-col">
+    <header class="bg-white border-b p-4 flex items-center gap-4 shadow-sm z-50">
+        <div class="flex gap-2 items-center border-r pr-4 text-xs">
+            <span class="font-bold text-slate-400 uppercase">视频</span>
+            <input type="file" @change="handleMediaUpload" accept="video/*" class="w-40">
+        </div>
+        <div class="flex gap-4 border-r pr-4 text-xs">
+            <div class="flex flex-col"><span class="font-bold text-slate-400">1. MAPPING</span><input type="file" @change="e => handleXlsxUpload(e, 'mapping')"></div>
+            <div class="flex flex-col"><span class="font-bold text-slate-400">2. CHUNKS</span><input type="file" @change="e => handleXlsxUpload(e, 'chunks')"></div>
+        </div>
+        <div class="ml-auto flex gap-2">
+            <button @click="exportData('mapping')" class="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 shadow-sm text-xs">导出 Mapping</button>
+            <button @click="exportData('chunks')" class="bg-emerald-600 text-white px-4 py-2 rounded font-bold hover:bg-emerald-700 shadow-sm text-xs">导出 Chunks</button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden p-4 gap-4">
+        <div class="w-[520px] flex flex-col gap-4">
+            <div class="bg-black aspect-video rounded-xl overflow-hidden shadow-lg border border-slate-200">
+                <video ref="videoPlayer" :src="mediaUrl" controls class="w-full h-full" @timeupdate="onVideoTimeUpdate"></video>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border shadow-sm">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Waveform View</span>
+                    <div class="flex gap-1">
+                        <button @click="zoomWave(25)" class="p-1 bg-slate-100 rounded hover:bg-slate-200" title="放大"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
+                        <button @click="zoomWave(-25)" class="p-1 bg-slate-100 rounded hover:bg-slate-200" title="缩小"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M20 12H4"></path></svg></button>
+                    </div>
+                </div>
+                <div id="waveform"></div>
+            </div>
+
+            <div class="flex-1 bg-white rounded-xl border shadow-sm flex flex-col overflow-hidden">
+                <div class="bg-slate-50 px-4 py-2 border-b flex justify-between items-center font-bold">
+                    <span class="text-[10px] text-slate-500 uppercase">当前句子单词</span>
+                    <button @click="addNewWord" class="text-[10px] bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">+ 插入单词</button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-4 flex flex-wrap gap-2 align-content-start">
+                    <div v-for="(word, idx) in lockedWords" :key="word.uuid" class="word-chip p-2 rounded bg-white shadow-sm flex flex-col min-w-[100px]">
+                        <div class="flex justify-between text-[9px] font-mono text-slate-400 mb-1">
+                            <input type="number" v-model.number="word.start" step="0.001" @change="updateRegion(word)" class="w-12 bg-transparent outline-none border-b border-transparent focus:border-blue-300">
+                            <input type="number" v-model.number="word.end" step="0.001" @change="updateRegion(word)" class="w-12 bg-transparent text-right outline-none border-b border-transparent focus:border-blue-300">
+                        </div>
+                        <input v-model="word.text" @input="syncMappingFromWords" class="text-sm font-bold border-none p-0 focus:ring-0 w-full bg-transparent">
+                        <div class="flex justify-between mt-2 pt-1 border-t text-[9px] font-bold">
+                            <button @click="splitAtWord(idx)" class="text-blue-500 hover:underline">从此切分</button>
+                            <button @click="deleteWord(word.uuid)" class="text-red-400 hover:underline">删除</button>
+                        </div>
+                    </div>
+                    <div v-if="!selectedRow" class="w-full text-center py-20 text-slate-300 italic">请点击右侧行进行编辑</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col">
+            <div class="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-900 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <div class="col-span-1">ID</div>
+                <div class="col-span-2">Speaker</div>
+                <div class="col-span-6">Source (Content)</div>
+                <div class="col-span-3 text-right">Actions</div>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <div v-for="(row, index) in mappingData" :key="row.rowKey" 
+                     :class="['grid grid-cols-12 gap-4 px-6 py-4 border-b items-start cursor-pointer group transition-all', selectedRow === row ? 'active-row' : 'hover:bg-slate-50']"
+                     @click="selectRow(row)">
+                    <div class="col-span-1 font-mono text-slate-400 text-xs">#{{index + 1}}</div>
+                    <div class="col-span-2">
+                        <input v-model="row.speaker_id" class="w-full bg-transparent font-bold text-blue-600 border border-slate-100 px-1 text-[10px]">
+                    </div>
+                    <div class="col-span-6 flex flex-col gap-1">
+                        <textarea v-model="row.Source" rows="2" class="w-full bg-transparent border-none p-0 focus:ring-0 resize-none font-medium text-sm leading-tight"></textarea>
+                        <div class="text-[9px] font-mono text-slate-400">{{row.start_time}} - {{row.end_time}}</div>
+                    </div>
+                    <div class="col-span-3 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button @click.stop="playThisSegment(row)" class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[10px] font-bold hover:bg-blue-600 hover:text-white">播放</button>
+                        <button @click.stop="mergeNext(index)" class="px-2 py-1 bg-green-50 text-green-600 rounded text-[10px] font-bold hover:bg-green-600 hover:text-white">合并</button>
+                        <button @click.stop="deleteRow(index)" class="px-2 py-1 bg-red-50 text-red-500 rounded text-[10px] font-bold hover:bg-red-600 hover:text-white">删除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+createApp({
+    setup() {
+        const mediaUrl = ref(null);
+        const videoPlayer = ref(null);
+        const mappingData = ref([]);
+        const chunksData = ref([]);
+        const selectedRow = ref(null);
+        const lockedWords = ref([]);
+        const stopAtTime = ref(999999);
+        let ws = null, wsRegions = null;
+
+        const stripAllQuotes = (str) => String(str || "").replace(/^["']+|["']+$/g, '').trim();
+        const formatT = (s) => (s || s === 0) ? new Date(s * 1000).toISOString().substr(11, 12) : "00:00:00.000";
+
+        onMounted(() => {
+            ws = WaveSurfer.create({ container: '#waveform', waveColor: '#cbd5e1', progressColor: '#3b82f6', height: 70, minPxPerSec: 50, scrollbar: true });
+            wsRegions = ws.registerPlugin(WaveSurfer.Regions.create());
+            wsRegions.on('region-updated', (region) => {
+                const word = chunksData.value.find(w => w.uuid === region.id);
+                if (word) {
+                    word.start = Number(region.start.toFixed(3));
+                    word.end = Number(region.end.toFixed(3));
+                    syncMappingFromWords();
+                }
+            });
+        });
+
+        const handleMediaUpload = (e) => {
+            const file = e.target.files[0];
+            if (file) { mediaUrl.value = URL.createObjectURL(file); ws.load(mediaUrl.value); }
+        };
+
+        const handleXlsxUpload = (e, type) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const workbook = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                if (type === 'chunks') {
+                    chunksData.value = json.map((w, i) => ({ ...w, uuid: `w-${i}-${Date.now()}`, text: stripAllQuotes(w.text), start: Number(w.start), end: Number(w.end) }));
+                } else {
+                    mappingData.value = json.map((r, i) => ({ ...r, rowKey: `r-${i}-${Date.now()}`, Source: stripAllQuotes(r.Source), start: Number(r.start), end: Number(r.end) }));
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        const selectRow = (row) => {
+            selectedRow.value = row;
+            // 选出该行的单词引用
+            lockedWords.value = chunksData.value.filter(w => {
+                const mid = (w.start + w.end) / 2;
+                return mid >= row.start - 0.01 && mid <= row.end + 0.01;
+            }).sort((a,b) => a.start - b.start);
+            
+            wsRegions.clearRegions();
+            lockedWords.value.forEach(w => {
+                wsRegions.addRegion({ id: w.uuid, start: w.start, end: w.end, color: 'rgba(59, 130, 246, 0.2)', drag: true, resize: true });
+            });
+            ws.setTime(row.start);
+        };
+
+        const syncMappingFromWords = () => {
+            if (!selectedRow.value || lockedWords.value.length === 0) return;
+            
+            // 对当前句单词按时间排序
+            const words = [...lockedWords.value].sort((a,b) => a.start - b.start);
+            
+            // 更新 Mapping 句子的文本内容
+            selectedRow.value.Source = words.map(w => w.text).join(' ');
+            
+            // 更新 Mapping 句子的时间边界
+            selectedRow.value.start = words[0].start;
+            selectedRow.value.end = words[words.length - 1].end;
+            
+            // 更新格式化时间字符串（用于右侧列表显示）
+            selectedRow.value.start_time = formatT(selectedRow.value.start);
+            selectedRow.value.end_time = formatT(selectedRow.value.end);
+        };
+
+        // 核心修复：拆分函数
+        const splitAtWord = (idx) => {
+            const words = [...lockedWords.value].sort((a,b) => a.start - b.start);
+            if (idx >= words.length - 1) return;
+            
+            const targetIdx = mappingData.value.indexOf(selectedRow.value);
+            const originalRow = mappingData.value[targetIdx];
+
+            // 1. 获取两组单词
+            const firstHalfWords = words.slice(0, idx + 1);
+            const secondHalfWords = words.slice(idx + 1);
+
+            // 2. 创建一个物理上的新对象 (彻底切断引用)
+            const newRow = {
+                rowKey: `nr-${Date.now()}`,
+                speaker_id: originalRow.speaker_id,
+                start: secondHalfWords[0].start,
+                end: originalRow.end,
+                Source: secondHalfWords.map(w => w.text).join(' ') // 立即计算新文本
+            };
+            newRow.start_time = formatT(newRow.start);
+            newRow.end_time = formatT(newRow.end);
+
+            // 3. 修改原行的结尾和文本
+            originalRow.end = firstHalfWords[firstHalfWords.length - 1].end;
+            originalRow.end_time = formatT(originalRow.end);
+            originalRow.Source = firstHalfWords.map(w => w.text).join(' '); // 立即刷新原文本
+
+            // 4. 插入数组
+            mappingData.value.splice(targetIdx + 1, 0, newRow);
+
+            // 5. 选中新行，方便继续编辑
+            nextTick(() => selectRow(originalRow));
+        };
+
+        // 核心修复：合并函数
+        const mergeNext = (idx) => {
+            if (idx >= mappingData.value.length - 1) return;
+            const curr = mappingData.value[idx];
+            const next = mappingData.value[idx + 1];
+
+            // 1. 物理合并时间
+            curr.end = next.end;
+            curr.end_time = next.end_time;
+
+            // 2. 删除下一行
+            mappingData.value.splice(idx + 1, 1);
+
+            // 3. 强制重选当前行来刷新单词引用和文本
+            nextTick(() => {
+                selectRow(curr);
+                syncMappingFromWords();
+            });
+        };
+
+        const addNewWord = () => {
+            if (!selectedRow.value) return alert("请先选择一行字幕");
+
+            // 1. 确定插入位置和起始时间
+            const words = lockedWords.value;
+            let newStart, insertIndex;
+
+            if (words.length > 0) {
+                // 如果当前句有单词，紧跟在最后一个单词后面
+                const lastW = words[words.length - 1];
+                newStart = lastW.end;
+                // 找到该单词在全局数组中的物理位置
+                insertIndex = chunksData.value.indexOf(lastW) + 1;
+            } else {
+                // 如果当前句是空的，从句子的起始时间开始
+                newStart = selectedRow.value.start;
+                // 找到全局数组中第一个起始时间大于该位置的索引
+                insertIndex = chunksData.value.findIndex(w => w.start > newStart);
+                if (insertIndex === -1) insertIndex = chunksData.value.length;
+            }
+
+            // 2. 创建新单词对象
+            const newW = { 
+                uuid: `nw-${Date.now()}`, 
+                text: "NEW", 
+                start: newStart, 
+                end: newStart + 0.3, 
+                speaker_id: selectedRow.value.speaker_id 
+            };
+
+            // 3. 在全局数据的正确位置插入（保证导出顺序）
+            chunksData.value.splice(insertIndex, 0, newW);
+
+            // 4. 同步更新当前编辑面板的锁定列表
+            lockedWords.value.push(newW);
+            lockedWords.value.sort((a, b) => a.start - b.start);
+
+            // 5. 在波形图上立即绘制对应色块
+            wsRegions.addRegion({ 
+                id: newW.uuid, 
+                start: newW.start, 
+                end: newW.end, 
+                color: 'rgba(59, 130, 246, 0.2)', 
+                drag: true, 
+                resize: true 
+            });
+
+            // 6. 核心步骤：强制同步 Mapping 表中的句子时长和文本
+            syncMappingFromWords();
+        };
+
+        const deleteWord = (uuid) => {
+            chunksData.value = chunksData.value.filter(w => w.uuid !== uuid);
+            lockedWords.value = lockedWords.value.filter(w => w.uuid !== uuid);
+            selectRow(selectedRow.value);
+            syncMappingFromWords();
+        };
+
+        const deleteRow = (i) => {
+            if(confirm("确定删除？")) {
+                if(mappingData.value[i] === selectedRow.value) selectedRow.value = null;
+                mappingData.value.splice(i, 1);
+            }
+        };
+
+        const playThisSegment = (row) => {
+            selectRow(row);
+            if (videoPlayer.value) { videoPlayer.value.currentTime = row.start; stopAtTime.value = row.end; videoPlayer.value.play(); }
+        };
+
+        const onVideoTimeUpdate = () => {
+            if (videoPlayer.value.currentTime >= stopAtTime.value) { videoPlayer.value.pause(); stopAtTime.value = 999999; }
+            ws.setTime(videoPlayer.value.currentTime);
+        };
+
+        const zoomWave = (val) => {
+            const target = ws.options.minPxPerSec + val;
+            if (target > 10 && target < 1000) ws.zoom(target);
+        };
+
+        const exportData = (type) => {
+            let data = [], name = "";
+            if (type === 'mapping') {
+                data = mappingData.value.sort((a,b)=>a.start-b.start).map((r, i) => ({
+                    line_id: i + 1, Source: r.Source, start: Number(r.start.toFixed(3)), end: Number(r.end.toFixed(3)),
+                    start_time: formatT(r.start), end_time: formatT(r.end), speaker_id: r.speaker_id
+                }));
+                name = "mapping_v3.7.xlsx";
+            } else {
+                data = chunksData.value.sort((a,b)=>a.start-b.start).map(w => ({
+                    text: w.text, start: Number(w.start.toFixed(3)), end: Number(w.end.toFixed(3)), speaker_id: w.speaker_id
+                }));
+                name = "chunks_v3.7.xlsx";
+            }
+            const ws_s = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws_s, "Sheet1");
+            XLSX.writeFile(wb, name);
+        };
+
+        const updateRegion = (word) => {
+            const reg = wsRegions.getRegions().find(r => r.id === word.uuid);
+            if (reg) reg.update({ start: word.start, end: word.end });
+            syncMappingFromWords();
+        };
+
+        return {
+            mediaUrl, videoPlayer, mappingData, chunksData, selectedRow, lockedWords,
+            handleMediaUpload, handleXlsxUpload, selectRow, playThisSegment, onVideoTimeUpdate,
+            addNewWord, deleteWord, deleteRow, mergeNext, splitAtWord, zoomWave, exportData, updateRegion
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
