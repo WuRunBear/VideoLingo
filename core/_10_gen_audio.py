@@ -2,6 +2,7 @@ import os
 import time
 import shutil
 import subprocess
+import math
 from typing import Tuple
 
 import pandas as pd
@@ -29,13 +30,30 @@ def parse_df_srt_time(time_str: str) -> float:
 
 def adjust_audio_speed(input_file: str, output_file: str, speed_factor: float) -> None:
     """Adjust audio speed and handle edge cases"""
+    try:
+        speed_factor = float(speed_factor)
+    except Exception:
+        speed_factor = 1.0
+    if not math.isfinite(speed_factor) or speed_factor <= 0:
+        rprint(f"[yellow]⚠️ Invalid speed_factor={speed_factor}, fallback to 1.0 (input={input_file})[/yellow]")
+        speed_factor = 1.0
+
     # If the speed factor is close to 1, directly copy the file
     if abs(speed_factor - 1.0) < 0.001:
         shutil.copy2(input_file, output_file)
         return
         
-    atempo = speed_factor
-    cmd = ['ffmpeg', '-i', input_file, '-filter:a', f'atempo={atempo}', '-y', output_file]
+    factors = []
+    remaining = speed_factor
+    while remaining > 2.0:
+        factors.append(2.0)
+        remaining /= 2.0
+    while remaining < 0.5:
+        factors.append(0.5)
+        remaining /= 0.5
+    factors.append(remaining)
+    atempo_filter = ",".join([f"atempo={round(f, 6)}" for f in factors])
+    cmd = ['ffmpeg', '-i', input_file, '-filter:a', atempo_filter, '-y', output_file]
     input_duration = get_audio_duration(input_file)
     max_retries = 2
     for attempt in range(max_retries):
@@ -59,6 +77,7 @@ def adjust_audio_speed(input_file: str, output_file: str, speed_factor: float) -
                 rprint(f"[yellow]⚠️ Audio speed adjustment failed, retrying in 1s ({attempt + 1}/{max_retries})[/yellow]")
                 time.sleep(1)
             else:
+                rprint(f"[red]❌ ffmpeg failed: filter={atempo_filter}, speed_factor={speed_factor}[/red]")
                 rprint(f"[red]❌ Audio speed adjustment failed, max retries reached ({max_retries})[/red]")
                 raise e
 
@@ -124,18 +143,52 @@ def process_chunk(chunk_df: pd.DataFrame, accept: float, min_speed: float) -> tu
     
     keep_gaps = True
     speed_var_error = 0.1
+    try:
+        accept = float(accept)
+    except Exception:
+        accept = 1.0
+    try:
+        min_speed = float(min_speed)
+    except Exception:
+        min_speed = 0.5
+    if not math.isfinite(accept) or accept <= 0:
+        accept = 1.0
+    if not math.isfinite(min_speed) or min_speed <= 0:
+        min_speed = 0.5
+
+    denom_main = durations - speed_var_error
+    denom_tol = tol_durs - speed_var_error
+    if not math.isfinite(denom_main) or denom_main <= 0 or not math.isfinite(denom_tol) or denom_tol <= 0:
+        first_num = chunk_df.iloc[0]['number'] if len(chunk_df) > 0 and 'number' in chunk_df.columns else None
+        last_num = chunk_df.iloc[-1]['number'] if len(chunk_df) > 0 and 'number' in chunk_df.columns else None
+        last_tol = chunk_df.iloc[-1]['tolerance'] if len(chunk_df) > 0 and 'tolerance' in chunk_df.columns else None
+        rprint(
+            f"[yellow]⚠️ Invalid chunk denominator, fallback speed_factor=1.0 | "
+            f"range={first_num}-{last_num}, chunk_durs={chunk_durs:.3f}, tol_durs={tol_durs:.3f}, "
+            f"durations={durations:.3f}, last_tolerance={last_tol}, all_gaps={all_gaps:.3f}, "
+            f"accept={accept}, min_speed={min_speed}[/yellow]"
+        )
+        return 1.0, False
 
     if (chunk_durs + all_gaps) / accept < durations:
-        speed_factor = max(min_speed, (chunk_durs + all_gaps) / (durations-speed_var_error))
+        speed_factor = max(min_speed, (chunk_durs + all_gaps) / denom_main)
     elif chunk_durs / accept < durations:
-        speed_factor = max(min_speed, chunk_durs / (durations-speed_var_error))
+        speed_factor = max(min_speed, chunk_durs / denom_main)
         keep_gaps = False
     elif (chunk_durs + all_gaps) / accept < tol_durs:
-        speed_factor = max(min_speed, (chunk_durs + all_gaps) / (tol_durs-speed_var_error))
+        speed_factor = max(min_speed, (chunk_durs + all_gaps) / denom_tol)
     else:
-        speed_factor = chunk_durs / (tol_durs-speed_var_error)
+        speed_factor = chunk_durs / denom_tol
         keep_gaps = False
         
+    if not math.isfinite(speed_factor) or speed_factor <= 0:
+        first_num = chunk_df.iloc[0]['number'] if len(chunk_df) > 0 and 'number' in chunk_df.columns else None
+        last_num = chunk_df.iloc[-1]['number'] if len(chunk_df) > 0 and 'number' in chunk_df.columns else None
+        rprint(
+            f"[yellow]⚠️ Invalid computed speed_factor={speed_factor}, fallback to 1.0 | "
+            f"range={first_num}-{last_num}[/yellow]"
+        )
+        return 1.0, False
     return round(speed_factor, 3), keep_gaps
 
 def merge_chunks(tasks_df: pd.DataFrame) -> pd.DataFrame:
@@ -143,6 +196,18 @@ def merge_chunks(tasks_df: pd.DataFrame) -> pd.DataFrame:
     rprint("[bold blue]🔄 Starting audio chunks processing...[/bold blue]")
     accept = load_key("speed_factor.accept")
     min_speed = load_key("speed_factor.min")
+    try:
+        accept = float(accept)
+    except Exception:
+        accept = 1.0
+    try:
+        min_speed = float(min_speed)
+    except Exception:
+        min_speed = 0.5
+    if not math.isfinite(accept) or accept <= 0:
+        accept = 1.0
+    if not math.isfinite(min_speed) or min_speed <= 0:
+        min_speed = 0.5
     chunk_start = 0
     
     tasks_df['new_sub_times'] = None
