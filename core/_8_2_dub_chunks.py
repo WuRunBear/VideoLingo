@@ -66,15 +66,23 @@ def analyze_subtitle_timing_and_speed(df):
     for i in range(len(df) - 1):
         current_end = datetime.datetime.strptime(df.loc[i, 'end_time'], '%H:%M:%S.%f').time()
         next_start = datetime.datetime.strptime(df.loc[i + 1, 'start_time'], '%H:%M:%S.%f').time()
-        df.loc[i, 'gap'] = time_diff_seconds(current_end, next_start, datetime.date.today())
+        gap = time_diff_seconds(current_end, next_start, datetime.date.today())
+        if gap < 0:
+            rprint(f"[yellow]⚠️ Negative gap detected at line {i} ({gap:.3f}s), clamped to 0[/yellow]")
+            gap = 0.0
+        df.loc[i, 'gap'] = gap
     
     # Set the gap for the last line
     last_end = datetime.datetime.strptime(df.iloc[-1]['end_time'], '%H:%M:%S.%f').time()
     last_end_seconds = (last_end.hour * 3600 + last_end.minute * 60 + 
                        last_end.second + last_end.microsecond / 1000000)
-    df.iloc[-1, df.columns.get_loc('gap')] = whole_dur - last_end_seconds
+    last_gap = whole_dur - last_end_seconds
+    if last_gap < 0:
+        rprint(f"[yellow]⚠️ Last end_time exceeds audio duration by {-last_gap:.3f}s, clamped last gap to 0[/yellow]")
+        last_gap = 0.0
+    df.iloc[-1, df.columns.get_loc('gap')] = last_gap
     
-    df['tolerance'] = df['gap'].apply(lambda x: TOLERANCE if x > TOLERANCE else x)
+    df['tolerance'] = df['gap'].apply(lambda x: max(0.0, min(TOLERANCE, float(x))))
     df['tol_dur'] = df['duration'] + df['tolerance']
     df['est_dur'] = df.apply(lambda x: estimate_duration(x['text'], ESTIMATOR), axis=1)
 
