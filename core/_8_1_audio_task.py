@@ -15,6 +15,7 @@ speed_factor = load_key("speed_factor")
 
 TRANS_SUBS_FOR_AUDIO_FILE = 'static/output/audio/trans_subs_for_audio.srt'
 SRC_SUBS_FOR_AUDIO_FILE = 'static/output/audio/src_subs_for_audio.srt'
+SPEAKER_MAPPING_LOCKED = "static/output/log/speaker_mapping_locked.xlsx"
 ESTIMATOR = None
 
 def check_len_then_trim(text, duration):
@@ -70,6 +71,13 @@ def process_srt():
         for idx, row in df_spk.iterrows():
             speaker_dict[idx + 1] = row.get('speaker_id', None)
 
+    mapping_df = None
+    if os.path.exists(SPEAKER_MAPPING_LOCKED):
+        try:
+            mapping_df = pd.read_excel(SPEAKER_MAPPING_LOCKED)
+        except Exception:
+            mapping_df = None
+
     for block in src_content.strip().split('\n\n'):
         lines = [line.strip() for line in block.split('\n') if line.strip()]
         if len(lines) < 3:
@@ -102,6 +110,20 @@ def process_srt():
 
             # Get speaker_id
             speaker_id = speaker_dict.get(number, None)
+            if mapping_df is not None and (number - 1) < len(mapping_df):
+                row = mapping_df.iloc[number - 1]
+                if 'start' in mapping_df.columns and 'end' in mapping_df.columns and pd.notna(row.get('start')) and pd.notna(row.get('end')):
+                    start_seconds = float(row['start'])
+                    end_seconds = float(row['end'])
+                    start_time = (datetime.datetime.min + datetime.timedelta(seconds=start_seconds)).time()
+                    end_time = (datetime.datetime.min + datetime.timedelta(seconds=end_seconds)).time()
+                    duration = end_seconds - start_seconds
+                elif 'start_time' in mapping_df.columns and 'end_time' in mapping_df.columns and pd.notna(row.get('start_time')) and pd.notna(row.get('end_time')):
+                    start_time = datetime.datetime.strptime(str(row['start_time']), '%H:%M:%S.%f').time()
+                    end_time = datetime.datetime.strptime(str(row['end_time']), '%H:%M:%S.%f').time()
+                    duration = time_diff_seconds(start_time, end_time, datetime.date.today())
+                if 'speaker_id' in mapping_df.columns and pd.notna(row.get('speaker_id')):
+                    speaker_id = row.get('speaker_id')
 
         except ValueError as e:
             rprint(Panel(f"Unable to parse subtitle block '{block}', error: {str(e)}, skipping this subtitle block.", title="Error", border_style="red"))
@@ -111,6 +133,11 @@ def process_srt():
     
     df = pd.DataFrame(subtitles)
     
+    if mapping_df is not None:
+        df['start_time'] = df['start_time'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])
+        df['end_time'] = df['end_time'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])
+        return df
+
     i = 0
     MIN_SUB_DUR = load_key("min_subtitle_duration")
     while i < len(df):
