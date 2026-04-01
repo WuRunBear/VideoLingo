@@ -1,5 +1,7 @@
 import os, sys
+import io
 import mimetypes
+import pandas as pd
 
 # Fix mime types for static serving in Linux
 mimetypes.add_type('video/mp4', '.mp4')
@@ -18,7 +20,7 @@ mimetypes.add_type('image/svg+xml', '.svg')
 import streamlit as st
 from core.st_utils.imports_and_utils import *
 from core import *
-from core.utils.models import _2_CLEANED_CHUNKS
+from core.utils.models import _2_CLEANED_CHUNKS, _RAW_AUDIO_FILE
 
 # SET PATH
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,113 @@ SPEAKER_MAPPING_LOCKED = "static/output/log/speaker_mapping_locked.xlsx"
 def mapping_section():
     st.header("b. 句子与说话人确认")
     with st.container(border=True):
+        def _audio_duration_seconds() -> float | None:
+            try:
+                if not os.path.exists(_RAW_AUDIO_FILE):
+                    return None
+                from core.asr_backend.audio_preprocess import get_audio_duration
+                dur = float(get_audio_duration(_RAW_AUDIO_FILE))
+                return dur if dur > 0 else None
+            except Exception:
+                return None
+
+        def _read_xlsx(uploaded_file) -> pd.DataFrame:
+            data = uploaded_file.getvalue()
+            return pd.read_excel(io.BytesIO(data))
+
+        def _validate_cleaned_chunks_df(df: pd.DataFrame) -> tuple[list[str], list[str]]:
+            errors: list[str] = []
+            warnings: list[str] = []
+
+            required = {"text", "start", "end"}
+            missing = sorted(required - set(df.columns))
+            if missing:
+                errors.append(f"缺少必要列：{', '.join(missing)}")
+                return errors, warnings
+
+            df2 = df.copy()
+            df2["start"] = pd.to_numeric(df2["start"], errors="coerce")
+            df2["end"] = pd.to_numeric(df2["end"], errors="coerce")
+
+            bad = df2[df2["start"].isna() | df2["end"].isna()]
+            if not bad.empty:
+                errors.append(f"存在无法解析为数字的 start/end（行数：{len(bad)}）")
+
+            bad2 = df2[(df2["start"] < 0) | (df2["end"] < 0)]
+            if not bad2.empty:
+                errors.append(f"存在负数时间戳（行数：{len(bad2)}）")
+
+            bad3 = df2[df2["end"] < df2["start"]]
+            if not bad3.empty:
+                errors.append(f"存在 end < start（行数：{len(bad3)}）")
+
+            dur = _audio_duration_seconds()
+            if dur is not None:
+                bad4 = df2[(df2["start"] > dur) | (df2["end"] > dur)]
+                if not bad4.empty:
+                    errors.append(f"存在超出音频总时长 {dur:.3f}s 的时间戳（行数：{len(bad4)}）")
+
+            df3 = df2.dropna(subset=["start", "end"]).reset_index(drop=True)
+            if len(df3) >= 2:
+                if (df3["start"].diff().fillna(0) < -1e-6).any():
+                    warnings.append("检测到 start 非单调递增（可能会影响句子对齐）")
+
+            return errors, warnings
+
+        def _validate_speaker_mapping_df(df: pd.DataFrame) -> tuple[list[str], list[str]]:
+            errors: list[str] = []
+            warnings: list[str] = []
+
+            if "Source" not in df.columns:
+                errors.append("缺少必要列：Source")
+                return errors, warnings
+
+            if "start" in df.columns and "end" in df.columns:
+                df2 = df.copy()
+                df2["start"] = pd.to_numeric(df2["start"], errors="coerce")
+                df2["end"] = pd.to_numeric(df2["end"], errors="coerce")
+                bad = df2[df2["start"].isna() | df2["end"].isna()]
+                if not bad.empty:
+                    errors.append(f"存在无法解析为数字的 start/end（行数：{len(bad)}）")
+                bad2 = df2[(df2["start"] < 0) | (df2["end"] < 0)]
+                if not bad2.empty:
+                    errors.append(f"存在负数时间戳（行数：{len(bad2)}）")
+                bad3 = df2[df2["end"] <= df2["start"]]
+                if not bad3.empty:
+                    errors.append(f"存在 end <= start（行数：{len(bad3)}）")
+
+                dur = _audio_duration_seconds()
+                if dur is not None:
+                    bad4 = df2[(df2["start"] > dur) | (df2["end"] > dur)]
+                    if not bad4.empty:
+                        errors.append(f"存在超出音频总时长 {dur:.3f}s 的时间戳（行数：{len(bad4)}）")
+
+                df3 = df2.dropna(subset=["start", "end"]).sort_values("start").reset_index(drop=True)
+                if len(df3) >= 2:
+                    overlap = (df3["start"].iloc[1:].reset_index(drop=True) < df3["end"].iloc[:-1].reset_index(drop=True))
+                    if overlap.any():
+                        warnings.append("检测到句子时间段重叠（可能导致参考音频混入多人声）")
+            else:
+                warnings.append("未检测到 start/end 列，仅会使用句子文本进行后续流程")
+
+            if "line_id" in df.columns:
+                try:
+                    series = pd.to_numeric(df["line_id"], errors="coerce")
+                    if series.isna().any():
+                        errors.append("line_id 存在非数字/空值")
+                    elif series.duplicated().any():
+                        errors.append("line_id 存在重复值")
+                except Exception:
+                    errors.append("line_id 无法解析")
+
+            if "ref_audio_id" in df.columns:
+                series = pd.to_numeric(df["ref_audio_id"], errors="coerce")
+                bad = series.isna()
+                if bad.any():
+                    warnings.append("ref_audio_id 存在空值/非数字（将回退为本句 number）")
+
+            return errors, warnings
+
         st.markdown(f"""
         <p style='font-size: 20px;'>
         {t("This stage includes the following steps:")}
@@ -70,10 +179,21 @@ def mapping_section():
                     if uploaded is None:
                         st.error("请先选择一个 xlsx 文件再保存。")
                     else:
-                        os.makedirs(os.path.dirname(SPEAKER_MAPPING_DRAFT), exist_ok=True)
-                        with open(SPEAKER_MAPPING_DRAFT, "wb") as f:
-                            f.write(uploaded.getvalue())
-                        st.success("已上传并替换 speaker_mapping_draft.xlsx")
+                        try:
+                            df_up = _read_xlsx(uploaded)
+                            errors, warns = _validate_speaker_mapping_df(df_up)
+                            for w in warns[:5]:
+                                st.warning(w)
+                            if errors:
+                                for e in errors[:10]:
+                                    st.error(e)
+                            else:
+                                os.makedirs(os.path.dirname(SPEAKER_MAPPING_DRAFT), exist_ok=True)
+                                with open(SPEAKER_MAPPING_DRAFT, "wb") as f:
+                                    f.write(uploaded.getvalue())
+                                st.success("已上传并替换 speaker_mapping_draft.xlsx")
+                        except Exception as e:
+                            st.error(f"读取/校验 speaker_mapping_draft.xlsx 失败：{e}")
                 with st.form("upload_cleaned_chunks_form"):
                     uploaded_chunks = st.file_uploader(
                         "上传新的 cleaned_chunks.xlsx（覆盖词级时间）",
@@ -85,10 +205,21 @@ def mapping_section():
                     if uploaded_chunks is None:
                         st.error("请先选择一个 xlsx 文件再保存。")
                     else:
-                        os.makedirs(os.path.dirname(_2_CLEANED_CHUNKS), exist_ok=True)
-                        with open(_2_CLEANED_CHUNKS, "wb") as f:
-                            f.write(uploaded_chunks.getvalue())
-                        st.success("已上传并替换 cleaned_chunks.xlsx")
+                        try:
+                            df_up = _read_xlsx(uploaded_chunks)
+                            errors, warns = _validate_cleaned_chunks_df(df_up)
+                            for w in warns[:5]:
+                                st.warning(w)
+                            if errors:
+                                for e in errors[:10]:
+                                    st.error(e)
+                            else:
+                                os.makedirs(os.path.dirname(_2_CLEANED_CHUNKS), exist_ok=True)
+                                with open(_2_CLEANED_CHUNKS, "wb") as f:
+                                    f.write(uploaded_chunks.getvalue())
+                                st.success("已上传并替换 cleaned_chunks.xlsx")
+                        except Exception as e:
+                            st.error(f"读取/校验 cleaned_chunks.xlsx 失败：{e}")
                 st.info("请对照视频编辑 speaker_mapping_draft.xlsx（拆分/合并/修正 speaker_id），完成后点击“锁定映射并继续”。")
                 if st.button("锁定映射并继续", key="mapping_lock"):
                     _3_3_speaker_mapping.lock_speaker_mapping()
