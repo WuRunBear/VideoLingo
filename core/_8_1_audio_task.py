@@ -110,6 +110,7 @@ def process_srt():
 
             # Get speaker_id
             speaker_id = speaker_dict.get(number, None)
+            ref_audio_id = number
             if mapping_df is not None and (number - 1) < len(mapping_df):
                 row = mapping_df.iloc[number - 1]
                 if 'start' in mapping_df.columns and 'end' in mapping_df.columns and pd.notna(row.get('start')) and pd.notna(row.get('end')):
@@ -124,12 +125,17 @@ def process_srt():
                     duration = time_diff_seconds(start_time, end_time, datetime.date.today())
                 if 'speaker_id' in mapping_df.columns and pd.notna(row.get('speaker_id')):
                     speaker_id = row.get('speaker_id')
+                if 'ref_audio_id' in mapping_df.columns and pd.notna(row.get('ref_audio_id')):
+                    try:
+                        ref_audio_id = int(float(row.get('ref_audio_id')))
+                    except Exception:
+                        ref_audio_id = number
 
         except ValueError as e:
             rprint(Panel(f"Unable to parse subtitle block '{block}', error: {str(e)}, skipping this subtitle block.", title="Error", border_style="red"))
             continue
         
-        subtitles.append({'number': number, 'start_time': start_time, 'end_time': end_time, 'duration': duration, 'text': text, 'origin': origin, 'speaker_id': speaker_id})
+        subtitles.append({'number': number, 'start_time': start_time, 'end_time': end_time, 'duration': duration, 'text': text, 'origin': origin, 'speaker_id': speaker_id, 'ref_audio_id': ref_audio_id})
     
     df = pd.DataFrame(subtitles)
     

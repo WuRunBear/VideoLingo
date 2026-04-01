@@ -38,6 +38,16 @@ def tts_main(text, save_as, number, task_df):
     
     print(f"Generating <{text}...>")
     TTS_METHOD = load_key("tts_method")
+    refer_number = number
+    try:
+        if task_df is not None and 'ref_audio_id' in task_df.columns:
+            raw_ref = task_df.loc[task_df['number'] == number, 'ref_audio_id'].values[0]
+            if raw_ref is not None and str(raw_ref).strip() != '' and str(raw_ref).lower() != 'nan':
+                ref_val = int(float(raw_ref))
+                if ref_val > 0:
+                    refer_number = ref_val
+    except Exception:
+        refer_number = number
     
     max_retries = 3
     for attempt in range(max_retries):
@@ -49,21 +59,21 @@ def tts_main(text, save_as, number, task_df):
             if TTS_METHOD == 'openai_tts':
                 openai_tts(text, save_as)
             elif TTS_METHOD == 'gpt_sovits':
-                gpt_sovits_tts_for_videolingo(text, save_as, number, task_df)
+                gpt_sovits_tts_for_videolingo(text, save_as, refer_number, task_df)
             elif TTS_METHOD == 'fish_tts':
                 fish_tts(text, save_as)
             elif TTS_METHOD == 'azure_tts':
                 azure_tts(text, save_as)
             elif TTS_METHOD == 'sf_fish_tts':
-                siliconflow_fish_tts_for_videolingo(text, save_as, number, task_df)
+                siliconflow_fish_tts_for_videolingo(text, save_as, refer_number, task_df)
             elif TTS_METHOD == 'edge_tts':
                 edge_tts(text, save_as)
             elif TTS_METHOD == 'custom_tts':
-                custom_tts(text, save_as, number, task_df)
+                custom_tts(text, save_as, refer_number, task_df)
             elif TTS_METHOD == 'sf_cosyvoice2':
-                cosyvoice_tts_for_videolingo(text, save_as, number, task_df)
+                cosyvoice_tts_for_videolingo(text, save_as, refer_number, task_df)
             elif TTS_METHOD == 'f5tts':
-                f5_tts_for_videolingo(text, save_as, number, task_df)
+                f5_tts_for_videolingo(text, save_as, refer_number, task_df)
                 
             # Check generated audio duration
             duration = get_audio_duration(save_as)

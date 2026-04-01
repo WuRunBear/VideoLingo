@@ -44,6 +44,7 @@ def generate_speaker_mapping_draft() -> pd.DataFrame:
     df["start_time"] = df["start"].apply(_seconds_to_hmsms)
     df["end_time"] = df["end"].apply(_seconds_to_hmsms)
     df["speaker_id"] = speakers
+    df["ref_audio_id"] = df["line_id"]
 
     os.makedirs(os.path.dirname(SPEAKER_MAPPING_DRAFT), exist_ok=True)
     df.to_excel(SPEAKER_MAPPING_DRAFT, index=False)
@@ -65,6 +66,8 @@ def lock_speaker_mapping() -> pd.DataFrame:
         df.insert(0, "line_id", range(1, len(df) + 1))
 
     df["line_id"] = df["line_id"].astype(int)
+    if "ref_audio_id" not in df.columns:
+        df["ref_audio_id"] = df["line_id"]
     df = df.sort_values("line_id").reset_index(drop=True)
     df.to_excel(SPEAKER_MAPPING_LOCKED, index=False)
 
@@ -72,4 +75,3 @@ def lock_speaker_mapping() -> pd.DataFrame:
         f.write("\n".join(df["Source"].tolist()))
 
     return df
-
