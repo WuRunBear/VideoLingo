@@ -182,29 +182,39 @@ def gen_dub_chunks():
             return ''
         return re.sub(r'[^\w\s]|[\s]', '', text)
 
+    matching_failed = False
     for idx, row in df.iterrows():
-        target = clean_text(row['text'])
+        target = clean_text(row.get('text', ''))
         matches = []
         current = ''
-        match_indices = []  # Store indices for matching lines
-        
+        match_indices = []
+
         for i in range(last_idx, len(content_lines)):
             line = content_lines[i]
             cleaned_line = clean_text(line)
             current += cleaned_line
-            matches.append(line)  # 存储原始文本
+            matches.append(line)
             match_indices.append(i)
-            
+
             if current == target:
                 df.at[idx, 'lines'] = matches
-                df.at[idx, 'src_lines'] = [ori_content_lines[i] for i in match_indices]
+                if len(ori_content_lines) > 0:
+                    df.at[idx, 'src_lines'] = [ori_content_lines[j] for j in match_indices if j < len(ori_content_lines)]
                 last_idx = i + 1
                 break
-        else:  # If no match is found
-            rprint(f"[❌ Error] Matching failed at line {idx}:")
-            rprint(f"Target: '{target}'")
-            rprint(f"Current: '{current}'")
-            raise ValueError("Matching failed")
+        else:
+            rprint(f"[yellow]⚠️ Subtitle matching failed at row={idx}. Fallback to sentence-level lines.[/yellow]")
+            rprint(f"[yellow]Target(cleaned): '{target}'[/yellow]")
+            rprint(f"[yellow]Current(cleaned, partial): '{current[:200]}'[/yellow]")
+            matching_failed = True
+            break
+
+    if matching_failed:
+        df['lines'] = df['text'].apply(lambda x: [str(x)])
+        if 'origin' in df.columns:
+            df['src_lines'] = df['origin'].apply(lambda x: [str(x)])
+        else:
+            df['src_lines'] = df['lines']
 
     # Save results
     df.to_excel(_8_1_AUDIO_TASK, index=False)
