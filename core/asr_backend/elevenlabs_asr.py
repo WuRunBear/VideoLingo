@@ -47,7 +47,7 @@ def elev2whisper(elev_json, word_level_timestamp = False):
         seg["text"] += prev["text"]
         seg["end"] = prev["end"]
         if word_level_timestamp:
-            seg["words"].append({"text": prev["text"], "start": prev["start"], "end": prev["end"]})
+            seg["words"].append({"word": prev["text"], "start": prev["start"], "end": prev["end"], "speaker": prev.get("speaker_id")})
         # decide whether to break the segment
         if nxt is None or (nxt["start"] - prev["end"] > SPLIT_GAP) or (nxt["speaker_id"] != seg["speaker_id"]):
             seg["text"] = seg["text"].strip()
@@ -69,7 +69,15 @@ def transcribe_audio_elevenlabs(raw_audio_path, vocal_audio_path, start = None, 
     LOG_FILE = f"static/output/log/elevenlabs_transcribe_{start}_{end}.json"
     if os.path.exists(LOG_FILE):
         with open(LOG_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            cached = json.load(f)
+        segments = cached.get("segments", [])
+        if any(not isinstance(seg.get("words"), list) or len(seg.get("words")) == 0 for seg in segments):
+            try:
+                os.remove(LOG_FILE)
+            except Exception:
+                pass
+        else:
+            return cached
     
     # Load audio and process start/end parameters
     y, sr = librosa.load(vocal_audio_path, sr=16000)
@@ -124,7 +132,7 @@ def transcribe_audio_elevenlabs(raw_audio_path, vocal_audio_path, start = None, 
                     word['end'] += start
         
         rprint(f"[green]✓ Transcription completed in {time.time() - start_time:.2f} seconds[/green]")
-        parsed_result = elev2whisper(result)
+        parsed_result = elev2whisper(result, word_level_timestamp=True)
         os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
         with open(LOG_FILE, "w", encoding="utf-8") as f:
             json.dump(parsed_result, f, indent=4, ensure_ascii=False)
