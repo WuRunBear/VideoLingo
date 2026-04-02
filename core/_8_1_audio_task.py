@@ -77,6 +77,18 @@ def process_srt():
             mapping_df = pd.read_excel(SPEAKER_MAPPING_LOCKED)
         except Exception:
             mapping_df = None
+    if mapping_df is not None and 'start' in mapping_df.columns and 'end' in mapping_df.columns:
+        try:
+            mapping_df['start'] = pd.to_numeric(mapping_df['start'], errors='coerce')
+            mapping_df['end'] = pd.to_numeric(mapping_df['end'], errors='coerce')
+            if mapping_df['start'].isna().any() or mapping_df['end'].isna().any():
+                raise ValueError("speaker_mapping_locked.xlsx 的 start/end 存在无法解析为数字的值")
+            if (mapping_df['end'] <= mapping_df['start']).any():
+                raise ValueError("speaker_mapping_locked.xlsx 存在 end<=start，请修正时间")
+            if (mapping_df['start'].diff().fillna(0) < -1e-6).any():
+                raise ValueError("speaker_mapping_locked.xlsx 的 start 非单调递增，请按视频时间顺序排列行")
+        except Exception as e:
+            raise ValueError(f"speaker_mapping_locked.xlsx 时间校验失败：{e}")
 
     for block in src_content.strip().split('\n\n'):
         lines = [line.strip() for line in block.split('\n') if line.strip()]
@@ -140,6 +152,12 @@ def process_srt():
     df = pd.DataFrame(subtitles)
     
     if mapping_df is not None:
+        sec_start = df['start_time'].apply(lambda t: t.hour * 3600 + t.minute * 60 + t.second + t.microsecond / 1_000_000)
+        sec_end = df['end_time'].apply(lambda t: t.hour * 3600 + t.minute * 60 + t.second + t.microsecond / 1_000_000)
+        if (sec_end <= sec_start).any():
+            raise ValueError("生成 tts_tasks 时发现 end<=start，请检查 speaker_mapping_locked 或字幕时间")
+        if (sec_start.diff().fillna(0) < -1e-6).any():
+            raise ValueError("生成 tts_tasks 时发现 start 非单调递增，请检查 speaker_mapping_locked 的行顺序")
         df['start_time'] = df['start_time'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])
         df['end_time'] = df['end_time'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])
         return df

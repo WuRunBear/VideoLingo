@@ -68,10 +68,23 @@ def lock_speaker_mapping() -> pd.DataFrame:
     df["line_id"] = df["line_id"].astype(int)
     if "ref_audio_id" not in df.columns:
         df["ref_audio_id"] = df["line_id"]
+
+    if "start" in df.columns and "end" in df.columns:
+        df["start"] = pd.to_numeric(df["start"], errors="coerce")
+        df["end"] = pd.to_numeric(df["end"], errors="coerce")
+        bad_time = df[df["start"].isna() | df["end"].isna()]
+        if not bad_time.empty:
+            raise ValueError(f"speaker_mapping_draft.xlsx 存在无法解析的 start/end（行数：{len(bad_time)}）")
+        bad_order = df[df["end"] <= df["start"]]
+        if not bad_order.empty:
+            raise ValueError(f"speaker_mapping_draft.xlsx 存在 end<=start（行数：{len(bad_order)}）")
+        if (df["start"].diff().fillna(0) < -1e-6).any():
+            raise ValueError("speaker_mapping_draft.xlsx 的 start 非单调递增，请按视频时间顺序重新排列行")
     df = df.sort_values("line_id").reset_index(drop=True)
     df.to_excel(SPEAKER_MAPPING_LOCKED, index=False)
 
     with open(_3_2_SPLIT_BY_MEANING, "w", encoding="utf-8") as f:
+        f.write("\n".join(df["Source"].tolist()))
         f.write("\n".join(df["Source"].tolist()))
 
     return df

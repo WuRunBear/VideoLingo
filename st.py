@@ -118,6 +118,10 @@ def mapping_section():
                     if not bad4.empty:
                         errors.append(f"存在超出音频总时长 {dur:.3f}s 的时间戳（行数：{len(bad4)}）")
 
+                df4 = df2.dropna(subset=["start", "end"]).reset_index(drop=True)
+                if len(df4) >= 2 and (df4["start"].diff().fillna(0) < -1e-6).any():
+                    errors.append("start 非单调递增（行顺序必须按视频时间顺序排列，否则会导致配音分块/变速崩溃）")
+
                 df3 = df2.dropna(subset=["start", "end"]).sort_values("start").reset_index(drop=True)
                 if len(df3) >= 2:
                     overlap = (df3["start"].iloc[1:].reset_index(drop=True) < df3["end"].iloc[:-1].reset_index(drop=True))
