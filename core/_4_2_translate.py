@@ -75,6 +75,7 @@ def translate_all():
     
     # 💾 Save results to lists and Excel file
     src_text, trans_text = [], []
+    chunk_records = []
     for i, chunk in enumerate(chunks):
         chunk_lines = chunk.split('\n')
         src_text.extend(chunk_lines)
@@ -93,6 +94,17 @@ def translate_all():
             console.print(f"[yellow]Warning: Similar match found (chunk {i}, similarity: {best_match[1]:.3f})[/yellow]")
             
         trans_text.extend(best_match[0][2].split('\n'))
+        prev_ctx = get_previous_content(chunks, i)
+        aft_ctx = get_after_content(chunks, i)
+        chunk_records.append({
+            "chunk_index": i,
+            "previous_context": "\n".join(prev_ctx) if prev_ctx else "",
+            "source_chunk": chunk,
+            "after_context": "\n".join(aft_ctx) if aft_ctx else "",
+            "english_result": best_match[0][1],
+            "translation_chunk": best_match[0][2],
+            "similarity": best_match[1],
+        })
     
     # Trim long translation text
     df_text = pd.read_excel(_2_CLEANED_CHUNKS)
@@ -106,6 +118,10 @@ def translate_all():
     console.print(df_time)
     
     df_time.to_excel(_4_2_TRANSLATION, index=False)
+    try:
+        pd.DataFrame(chunk_records).to_excel("static/output/log/translation_chunks.xlsx", index=False)
+    except Exception:
+        pass
     console.print("[bold green]✅ Translation completed and results saved.[/bold green]")
 
 if __name__ == '__main__':

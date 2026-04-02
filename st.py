@@ -265,9 +265,45 @@ def translate_processing_section():
             return
 
         if not os.path.exists(SUB_VIDEO):
-            if st.button(t("Start Processing Subtitles"), key="translate_processing_button"):
-                process_translate_and_subtitles()
-                st.rerun()
+            if not os.path.exists("static/output/log/translation_results.xlsx"):
+                if st.button(t("Start Processing Subtitles"), key="translate_processing_button"):
+                    process_translate_only()
+                    st.rerun()
+            else:
+                st.success("翻译已完成，请人工校验后继续生成字幕")
+                st.download_button(
+                    label="📥 下载 Translation Results",
+                    data=open("static/output/log/translation_results.xlsx", "rb"),
+                    file_name="translation_results.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+                if os.path.exists("static/output/log/translation_chunks.xlsx"):
+                    st.download_button(
+                        label="📥 下载 Translation Chunks",
+                        data=open("static/output/log/translation_chunks.xlsx", "rb"),
+                        file_name="translation_chunks.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+                with st.form("upload_translation_results_form"):
+                    uploaded_tr = st.file_uploader(
+                        "上传已人工校验的 translation_results.xlsx（覆盖原文件）",
+                        type=["xlsx"],
+                        key="upload_translation_results"
+                    )
+                    save_tr = st.form_submit_button("保存翻译校验结果", use_container_width=True)
+                if save_tr:
+                    if uploaded_tr is None:
+                        st.error("请先选择一个 xlsx 文件再保存。")
+                    else:
+                        os.makedirs(os.path.dirname("static/output/log/translation_results.xlsx"), exist_ok=True)
+                        with open("static/output/log/translation_results.xlsx", "wb") as f:
+                            f.write(uploaded_tr.getvalue())
+                        st.success("已上传并替换 translation_results.xlsx")
+                if st.button("继续对齐并生成字幕", key="continue_align_and_subtitles"):
+                    process_align_and_subtitles()
+                    st.rerun()
         else:
             if load_key("burn_subtitles"):
                 st.video(SUB_VIDEO)
@@ -287,12 +323,15 @@ def translate_processing_section():
                 st.rerun()
             return True
 
-def process_translate_and_subtitles():
+def process_translate_only():
     with st.spinner(t("Summarizing and translating...")):
         _4_1_summarize.get_summary()
         if load_key("pause_before_translate"):
             input(t("⚠️ PAUSE_BEFORE_TRANSLATE. Go to `static/output/log/terminology.json` to edit terminology. Then press ENTER to continue..."))
         _4_2_translate.translate_all()
+    st.success("翻译完成，已生成 translation_results.xlsx。请人工校验后点击“继续对齐并生成字幕”。")
+
+def process_align_and_subtitles():
     with st.spinner(t("Processing and aligning subtitles...")):
         _5_split_sub.split_for_sub_main()
         _6_gen_sub.align_timestamp_main()
