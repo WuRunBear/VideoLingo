@@ -85,8 +85,19 @@ def process_srt():
                 raise ValueError("speaker_mapping_locked.xlsx 的 start/end 存在无法解析为数字的值")
             if (mapping_df['end'] <= mapping_df['start']).any():
                 raise ValueError("speaker_mapping_locked.xlsx 存在 end<=start，请修正时间")
-            if (mapping_df['start'].diff().fillna(0) < -1e-6).any():
-                raise ValueError("speaker_mapping_locked.xlsx 的 start 非单调递增，请按视频时间顺序排列行")
+            bad_mask = mapping_df['start'].diff().fillna(0) < -1e-6
+            if bad_mask.any():
+                bad_idx = bad_mask[bad_mask].index.tolist()
+                pairs = []
+                for i in bad_idx[:20]:
+                    prev_i = i - 1
+                    prev_line = mapping_df.loc[prev_i, 'line_id'] if 'line_id' in mapping_df.columns else prev_i + 1
+                    cur_line = mapping_df.loc[i, 'line_id'] if 'line_id' in mapping_df.columns else i + 1
+                    prev_start = float(mapping_df.loc[prev_i, 'start'])
+                    cur_start = float(mapping_df.loc[i, 'start'])
+                    pairs.append(f"{prev_line}({prev_start:.3f}s) -> {cur_line}({cur_start:.3f}s)")
+                detail = "；".join(pairs)
+                raise ValueError(f"speaker_mapping_locked.xlsx 的 start 非单调递增。异常相邻行（前->后）：{detail}")
         except Exception as e:
             raise ValueError(f"speaker_mapping_locked.xlsx 时间校验失败：{e}")
 
@@ -155,9 +166,20 @@ def process_srt():
         sec_start = df['start_time'].apply(lambda t: t.hour * 3600 + t.minute * 60 + t.second + t.microsecond / 1_000_000)
         sec_end = df['end_time'].apply(lambda t: t.hour * 3600 + t.minute * 60 + t.second + t.microsecond / 1_000_000)
         if (sec_end <= sec_start).any():
-            raise ValueError("生成 tts_tasks 时发现 end<=start，请检查 speaker_mapping_locked 或字幕时间")
-        if (sec_start.diff().fillna(0) < -1e-6).any():
-            raise ValueError("生成 tts_tasks 时发现 start 非单调递增，请检查 speaker_mapping_locked 的行顺序")
+            bad_rows = (sec_end <= sec_start)
+            bad_nums = df.loc[bad_rows, 'number'].tolist()[:30] if 'number' in df.columns else []
+            raise ValueError(f"生成 tts_tasks 时发现 end<=start。异常 number（最多30个）：{bad_nums}")
+        bad_mask = sec_start.diff().fillna(0) < -1e-6
+        if bad_mask.any():
+            bad_idx = bad_mask[bad_mask].index.tolist()
+            pairs = []
+            for i in bad_idx[:20]:
+                prev_i = i - 1
+                prev_num = int(df.loc[prev_i, 'number']) if 'number' in df.columns else prev_i + 1
+                cur_num = int(df.loc[i, 'number']) if 'number' in df.columns else i + 1
+                pairs.append(f"{prev_num}({sec_start.iloc[prev_i]:.3f}s) -> {cur_num}({sec_start.iloc[i]:.3f}s)")
+            detail = "；".join(pairs)
+            raise ValueError(f"生成 tts_tasks 时发现 start 非单调递增。异常相邻行（前->后）：{detail}")
         df['start_time'] = df['start_time'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])
         df['end_time'] = df['end_time'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])
         return df
