@@ -19,6 +19,7 @@ _8_1_AUDIO_TASK = "static/output/audio/tts_tasks.xlsx"
 _OUTPUT_DIR = "static/output"
 _AUDIO_DIR = "static/output/audio"
 _RAW_AUDIO_FILE = "static/output/audio/raw.mp3"
+_SEPARATION_AUDIO_FILE = "static/output/audio/raw_hq.wav"
 _VOCAL_AUDIO_FILE = "static/output/audio/vocal.mp3"
 _BACKGROUND_AUDIO_FILE = "static/output/audio/background.mp3"
 _AUDIO_REFERS_DIR = "static/output/audio/refers"
@@ -41,6 +42,7 @@ __all__ = [
     "_OUTPUT_DIR",
     "_AUDIO_DIR",
     "_RAW_AUDIO_FILE",
+    "_SEPARATION_AUDIO_FILE",
     "_VOCAL_AUDIO_FILE",
     "_BACKGROUND_AUDIO_FILE",
     "_AUDIO_REFERS_DIR",

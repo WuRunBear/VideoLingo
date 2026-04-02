@@ -51,6 +51,15 @@ def convert_video_to_audio(video_file: str):
             ]
         subprocess.run(cmd, check=True, stderr=subprocess.PIPE)
         rprint(f"[green]🎬➡️🎵 Converted <{video_file}> to <{_RAW_AUDIO_FILE}> with FFmpeg\n[/green]")
+    if not os.path.exists(_SEPARATION_AUDIO_FILE):
+        rprint(f"[blue]🎬➡️🎵 Extracting high-quality stereo audio for separation ......[/blue]")
+        cmd_hq = [
+            'ffmpeg', '-y', '-i', video_file, '-vn',
+            '-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '2',
+            _SEPARATION_AUDIO_FILE
+        ]
+        subprocess.run(cmd_hq, check=True, stderr=subprocess.PIPE)
+        rprint(f"[green]🎬➡️🎵 Generated <{_SEPARATION_AUDIO_FILE}> for source separation\n[/green]")
 
 def get_audio_duration(file_path):
     """Get the duration of an audio file in seconds."""

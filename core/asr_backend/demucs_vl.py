@@ -10,6 +10,8 @@ from demucs.api import Separator
 from demucs.apply import BagOfModels
 import gc
 from core.utils.models import *
+from core._1_ytdlp import find_video_files
+from core.asr_backend.audio_preprocess import convert_video_to_audio
 
 class PreloadedSeparator(Separator):
     def __init__(self, model: BagOfModels, shifts: int = 1, overlap: float = 0.25,
@@ -26,13 +28,16 @@ def demucs_audio():
     
     console = Console()
     os.makedirs(_AUDIO_DIR, exist_ok=True)
+    if not os.path.exists(_SEPARATION_AUDIO_FILE):
+        video_file = find_video_files()
+        convert_video_to_audio(video_file)
     
     console.print("🤖 Loading <htdemucs> model...")
     model = get_model('htdemucs')
     separator = PreloadedSeparator(model=model, shifts=1, overlap=0.25)
     
     console.print("🎵 Separating audio...")
-    _, outputs = separator.separate_audio_file(_RAW_AUDIO_FILE)
+    _, outputs = separator.separate_audio_file(_SEPARATION_AUDIO_FILE)
     
     kwargs = {"samplerate": model.samplerate, "bitrate": 128, "preset": 2, 
              "clip": "rescale", "as_float": False, "bits_per_sample": 16}
