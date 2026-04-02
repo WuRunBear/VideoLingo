@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import subprocess
 from pydub import AudioSegment
+from typing import Optional
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from rich.console import Console
 from core.utils import *
@@ -79,8 +80,67 @@ def process_audio_segment(audio_file):
     os.remove(temp_file)
     return audio_segment
 
-def merge_audio_segments(audios, new_sub_times, sample_rate):
-    merged_audio = AudioSegment.silent(duration=0, frame_rate=sample_rate)
+def _merge_time_ranges_ms(ranges_ms):
+    if not ranges_ms:
+        return []
+    ranges_ms = sorted([(int(s), int(e)) for s, e in ranges_ms if e > s], key=lambda x: x[0])
+    merged = [ranges_ms[0]]
+    for s, e in ranges_ms[1:]:
+        ps, pe = merged[-1]
+        if s <= pe:
+            merged[-1] = (ps, max(pe, e))
+        else:
+            merged.append((s, e))
+    return merged
+
+def _duck_audio(audio: AudioSegment, ranges_ms, duck_db: float, fade_ms: int = 10) -> AudioSegment:
+    if not ranges_ms:
+        return audio
+    out = audio
+    for start_ms, end_ms in ranges_ms:
+        start_ms = max(0, min(len(out), start_ms))
+        end_ms = max(0, min(len(out), end_ms))
+        if end_ms <= start_ms:
+            continue
+        seg = out[start_ms:end_ms].apply_gain(duck_db)
+        fm = int(fade_ms)
+        if fm > 0 and end_ms - start_ms >= 2:
+            fm = min(fm, (end_ms - start_ms) // 2)
+            if fm > 0:
+                seg = seg.fade_in(fm).fade_out(fm)
+        out = out[:start_ms] + seg + out[end_ms:]
+    return out
+
+def merge_audio_segments(audios, new_sub_times, sample_rate, base_audio_path: Optional[str] = None):
+    base_audio = None
+    if base_audio_path and os.path.exists(base_audio_path):
+        base_audio = AudioSegment.from_file(base_audio_path).set_frame_rate(sample_rate).set_channels(1)
+    merged_audio = base_audio if base_audio is not None else AudioSegment.silent(duration=0, frame_rate=sample_rate)
+    target_end_ms = 0
+    for time_range in new_sub_times:
+        if not isinstance(time_range, (list, tuple)) or len(time_range) != 2:
+            continue
+        start_time, end_time = time_range
+        try:
+            target_end_ms = max(target_end_ms, int(float(end_time) * 1000))
+        except Exception:
+            continue
+    if len(merged_audio) < target_end_ms:
+        merged_audio += AudioSegment.silent(duration=target_end_ms - len(merged_audio), frame_rate=sample_rate)
+
+    if base_audio is not None:
+        ranges_ms = []
+        for audio_file, time_range in zip(audios, new_sub_times):
+            if not os.path.exists(audio_file):
+                continue
+            if not isinstance(time_range, (list, tuple)) or len(time_range) != 2:
+                continue
+            start_time, end_time = time_range
+            try:
+                ranges_ms.append((int(float(start_time) * 1000), int(float(end_time) * 1000)))
+            except Exception:
+                continue
+        merged_audio = _duck_audio(merged_audio, _merge_time_ranges_ms(ranges_ms), duck_db=-30.0, fade_ms=10)
     
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TaskProgressColumn()) as progress:
         merge_task = progress.add_task("🎵 Merging audio segments...", total=len(audios))
@@ -93,19 +153,14 @@ def merge_audio_segments(audios, new_sub_times, sample_rate):
                 
             audio_segment = process_audio_segment(audio_file)
             start_time, end_time = time_range
-            
-            # Add silence segment
-            if i > 0:
-                prev_end = new_sub_times[i-1][1]
-                silence_duration = start_time - prev_end
-                if silence_duration > 0:
-                    silence = AudioSegment.silent(duration=int(silence_duration * 1000), frame_rate=sample_rate)
-                    merged_audio += silence
-            elif start_time > 0:
-                silence = AudioSegment.silent(duration=int(start_time * 1000), frame_rate=sample_rate)
-                merged_audio += silence
-                
-            merged_audio += audio_segment
+            try:
+                start_ms = int(float(start_time) * 1000)
+            except Exception:
+                start_ms = 0
+            end_candidate_ms = start_ms + len(audio_segment)
+            if len(merged_audio) < end_candidate_ms:
+                merged_audio += AudioSegment.silent(duration=end_candidate_ms - len(merged_audio), frame_rate=sample_rate)
+            merged_audio = merged_audio.overlay(audio_segment, position=max(0, start_ms))
             progress.advance(merge_task)
     
     return merged_audio
@@ -147,7 +202,8 @@ def merge_full_audio():
     console.print(f"[bold green]✅ Sample rate: {sample_rate}Hz[/bold green]")
 
     console.print("[bold cyan]🔄 Starting audio merge process...[/bold cyan]")
-    merged_audio = merge_audio_segments(audios, new_sub_times, sample_rate)
+    base_audio_path = _VOCAL_AUDIO_FILE if os.path.exists(_VOCAL_AUDIO_FILE) else None
+    merged_audio = merge_audio_segments(audios, new_sub_times, sample_rate, base_audio_path=base_audio_path)
     
     with console.status("[bold cyan]💾 Exporting final audio file...[/bold cyan]"):
         merged_audio = merged_audio.set_frame_rate(16000).set_channels(1)
