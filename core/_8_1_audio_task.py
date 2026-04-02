@@ -16,6 +16,7 @@ speed_factor = load_key("speed_factor")
 TRANS_SUBS_FOR_AUDIO_FILE = 'static/output/audio/trans_subs_for_audio.srt'
 SRC_SUBS_FOR_AUDIO_FILE = 'static/output/audio/src_subs_for_audio.srt'
 SPEAKER_MAPPING_LOCKED = "static/output/log/speaker_mapping_locked.xlsx"
+TRANSLATION_RESULTS = "static/output/log/translation_results.xlsx"
 ESTIMATOR = None
 
 def check_len_then_trim(text, duration):
@@ -55,6 +56,65 @@ def time_diff_seconds(t1, t2, base_date):
 def process_srt():
     """Process srt file, generate audio tasks"""
     
+    mapping_df = None
+    if os.path.exists(SPEAKER_MAPPING_LOCKED):
+        try:
+            mapping_df = pd.read_excel(SPEAKER_MAPPING_LOCKED)
+        except Exception:
+            mapping_df = None
+
+    if mapping_df is not None and os.path.exists(TRANSLATION_RESULTS):
+        try:
+            df_tr = pd.read_excel(TRANSLATION_RESULTS)
+            if "Source" not in df_tr.columns or "Translation" not in df_tr.columns:
+                raise ValueError("translation_results.xlsx 缺少 Source/Translation 列")
+            if "line_id" in mapping_df.columns:
+                mapping_df["line_id"] = pd.to_numeric(mapping_df["line_id"], errors="coerce").astype("Int64")
+                mapping_df = mapping_df.dropna(subset=["line_id"]).copy()
+            else:
+                mapping_df = mapping_df.copy()
+                mapping_df.insert(0, "line_id", range(1, len(mapping_df) + 1))
+
+            mapping_df["start"] = pd.to_numeric(mapping_df.get("start"), errors="coerce")
+            mapping_df["end"] = pd.to_numeric(mapping_df.get("end"), errors="coerce")
+            if mapping_df["start"].isna().any() or mapping_df["end"].isna().any():
+                raise ValueError("speaker_mapping_locked.xlsx 缺少 start/end 或存在无法解析为数字的值")
+            if (mapping_df["end"] <= mapping_df["start"]).any():
+                raise ValueError("speaker_mapping_locked.xlsx 存在 end<=start")
+
+            df_tr = df_tr[["Source", "Translation"]].copy()
+            df_tr.insert(0, "line_id", range(1, len(df_tr) + 1))
+            df_join = pd.merge(mapping_df, df_tr, on="line_id", how="left", suffixes=("", "_tr"))
+            missing_tr = df_join["Translation"].isna().sum()
+            if missing_tr > 0:
+                raise ValueError(f"translation_results.xlsx 行数不足或不匹配，缺少译文行数：{missing_tr}")
+
+            df_join = df_join.sort_values("line_id").reset_index(drop=True)
+            df_join["start_time"] = df_join["start"].apply(lambda s: (datetime.datetime.min + datetime.timedelta(seconds=float(s))).time())
+            df_join["end_time"] = df_join["end"].apply(lambda s: (datetime.datetime.min + datetime.timedelta(seconds=float(s))).time())
+            df_join["duration"] = df_join["end"] - df_join["start"]
+            df_join["number"] = df_join["line_id"].astype(int)
+            if "speaker_id" not in df_join.columns:
+                df_join["speaker_id"] = None
+            if "ref_audio_id" not in df_join.columns:
+                df_join["ref_audio_id"] = df_join["number"]
+
+            df_tasks = pd.DataFrame(
+                {
+                    "number": df_join["number"],
+                    "start_time": df_join["start_time"].apply(lambda x: x.strftime("%H:%M:%S.%f")[:-3]),
+                    "end_time": df_join["end_time"].apply(lambda x: x.strftime("%H:%M:%S.%f")[:-3]),
+                    "duration": df_join["duration"].astype(float),
+                    "text": df_join["Translation"].astype(str),
+                    "origin": df_join["Source"].astype(str),
+                    "speaker_id": df_join["speaker_id"],
+                    "ref_audio_id": df_join["ref_audio_id"],
+                }
+            )
+            return df_tasks
+        except Exception as e:
+            rprint(Panel(f"Locked mapping mode failed, fallback to srt parsing. Error: {e}", title="Warning", border_style="yellow"))
+
     with open(TRANS_SUBS_FOR_AUDIO_FILE, 'r', encoding='utf-8') as file:
         content = file.read()
     
@@ -70,13 +130,6 @@ def process_srt():
         df_spk = pd.read_excel(speaker_file)
         for idx, row in df_spk.iterrows():
             speaker_dict[idx + 1] = row.get('speaker_id', None)
-
-    mapping_df = None
-    if os.path.exists(SPEAKER_MAPPING_LOCKED):
-        try:
-            mapping_df = pd.read_excel(SPEAKER_MAPPING_LOCKED)
-        except Exception:
-            mapping_df = None
 
     mapping_by_line_id = None
     if mapping_df is not None and 'line_id' in mapping_df.columns:
