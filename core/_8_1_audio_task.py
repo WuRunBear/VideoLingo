@@ -77,6 +77,16 @@ def process_srt():
             mapping_df = pd.read_excel(SPEAKER_MAPPING_LOCKED)
         except Exception:
             mapping_df = None
+
+    mapping_by_line_id = None
+    if mapping_df is not None and 'line_id' in mapping_df.columns:
+        try:
+            mapping_df['line_id'] = pd.to_numeric(mapping_df['line_id'], errors='coerce').astype('Int64')
+            mapping_df = mapping_df.dropna(subset=['line_id']).copy()
+            mapping_by_line_id = mapping_df.set_index('line_id')
+        except Exception:
+            mapping_by_line_id = None
+
     if mapping_df is not None and 'start' in mapping_df.columns and 'end' in mapping_df.columns:
         try:
             mapping_df['start'] = pd.to_numeric(mapping_df['start'], errors='coerce')
@@ -134,7 +144,31 @@ def process_srt():
             # Get speaker_id
             speaker_id = speaker_dict.get(number, None)
             ref_audio_id = number
-            if mapping_df is not None and (number - 1) < len(mapping_df):
+            if mapping_by_line_id is not None:
+                try:
+                    row = mapping_by_line_id.loc[number]
+                except Exception:
+                    row = None
+                if row is None:
+                    raise RuntimeError(f"speaker_mapping_locked.xlsx 缺少 line_id={number}（请检查是否删除/重排导致缺号）")
+                if 'start' in mapping_df.columns and 'end' in mapping_df.columns and pd.notna(row.get('start')) and pd.notna(row.get('end')):
+                    start_seconds = float(row['start'])
+                    end_seconds = float(row['end'])
+                    start_time = (datetime.datetime.min + datetime.timedelta(seconds=start_seconds)).time()
+                    end_time = (datetime.datetime.min + datetime.timedelta(seconds=end_seconds)).time()
+                    duration = end_seconds - start_seconds
+                elif 'start_time' in mapping_df.columns and 'end_time' in mapping_df.columns and pd.notna(row.get('start_time')) and pd.notna(row.get('end_time')):
+                    start_time = datetime.datetime.strptime(str(row['start_time']), '%H:%M:%S.%f').time()
+                    end_time = datetime.datetime.strptime(str(row['end_time']), '%H:%M:%S.%f').time()
+                    duration = time_diff_seconds(start_time, end_time, datetime.date.today())
+                if 'speaker_id' in mapping_df.columns and pd.notna(row.get('speaker_id')):
+                    speaker_id = row.get('speaker_id')
+                if 'ref_audio_id' in mapping_df.columns and pd.notna(row.get('ref_audio_id')):
+                    try:
+                        ref_audio_id = int(float(row.get('ref_audio_id')))
+                    except Exception:
+                        ref_audio_id = number
+            elif mapping_df is not None and (number - 1) < len(mapping_df):
                 row = mapping_df.iloc[number - 1]
                 if 'start' in mapping_df.columns and 'end' in mapping_df.columns and pd.notna(row.get('start')) and pd.notna(row.get('end')):
                     start_seconds = float(row['start'])

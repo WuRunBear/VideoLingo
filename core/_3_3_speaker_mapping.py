@@ -85,6 +85,5 @@ def lock_speaker_mapping() -> pd.DataFrame:
 
     with open(_3_2_SPLIT_BY_MEANING, "w", encoding="utf-8") as f:
         f.write("\n".join(df["Source"].tolist()))
-        f.write("\n".join(df["Source"].tolist()))
 
     return df
