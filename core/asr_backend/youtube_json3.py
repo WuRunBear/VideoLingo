@@ -19,7 +19,7 @@ def _iter_json3_token_events(data: dict[str, Any]):
         yield event
 
 
-def parse_youtube_json3_to_words(json3_path: str) -> pd.DataFrame:
+def parse_youtube_json3_to_words(json3_path: str, max_end_seconds: float | None = None) -> pd.DataFrame:
     if not os.path.exists(json3_path):
         raise FileNotFoundError(json3_path)
 
@@ -94,6 +94,14 @@ def parse_youtube_json3_to_words(json3_path: str) -> pd.DataFrame:
     df["start"] = pd.to_numeric(df["start"], errors="coerce")
     df["end"] = pd.to_numeric(df["end"], errors="coerce")
     df = df.dropna(subset=["start", "end"])
+    if max_end_seconds is not None:
+        try:
+            max_end_seconds = float(max_end_seconds)
+        except Exception:
+            max_end_seconds = None
+    if max_end_seconds is not None and max_end_seconds > 0:
+        df["start"] = df["start"].clip(lower=0.0, upper=max_end_seconds)
+        df["end"] = df["end"].clip(lower=0.0, upper=max_end_seconds)
     df = df[df["text"].str.len() > 0]
     df = df[df["end"] >= df["start"]]
     df = df.sort_values(["start", "end"]).reset_index(drop=True)
