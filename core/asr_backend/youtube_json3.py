@@ -68,8 +68,10 @@ def parse_youtube_json3_to_words(json3_path: str) -> pd.DataFrame:
             delta_ms = next_start_ms - token_start_ms
             if delta_ms > 0:
                 token_end_ms = token_start_ms + max(1, int(delta_ms * 0.9))
-                if token_end_ms > next_start_ms:
-                    token_end_ms = next_start_ms
+                if token_end_ms >= next_start_ms:
+                    token_end_ms = next_start_ms - 1
+                if token_end_ms < token_start_ms:
+                    token_end_ms = token_start_ms
             else:
                 token_end_ms = token_start_ms
             if token_end_ms < token_start_ms:
