@@ -92,10 +92,42 @@ def download_video_section():
                 default_idx = list(res_dict.values()).index(target_res) if target_res in res_dict.values() else 0
                 res_display = st.selectbox(t("Resolution"), options=res_options, index=default_idx)
                 res = res_dict[res_display]
+
+            download_subtitles = st.checkbox("同时下载 YouTube 字幕", value=False)
+            subtitles_source = "auto"
+            subtitles_langs = None
+            subtitles_format = "srt"
+            if download_subtitles:
+                source_display = st.selectbox(
+                    "字幕来源",
+                    options=["自动字幕（YouTube 生成）", "上传字幕（视频自带）", "两者都下载"],
+                    index=0,
+                )
+                source_map = {
+                    "自动字幕（YouTube 生成）": "auto",
+                    "上传字幕（视频自带）": "manual",
+                    "两者都下载": "both",
+                }
+                subtitles_source = source_map.get(source_display, "auto")
+
+                fmt_display = st.selectbox("字幕格式", options=["SRT", "VTT", "JSON3"], index=0)
+                subtitles_format = fmt_display.lower()
+
+                langs_text = st.text_input("字幕语言（逗号或空格分隔，可留空=默认）", value="")
+                langs = [x.strip() for x in re.split(r"[,\s]+", langs_text) if x.strip()]
+                subtitles_langs = langs or None
+
             if st.button(t("Download Video"), key="download_button", width="stretch"):
                 if url:
                     with st.spinner("Downloading video..."):
-                        download_video_ytdlp(url, resolution=res)
+                        download_video_ytdlp(
+                            url,
+                            resolution=res,
+                            download_subtitles=download_subtitles,
+                            subtitles_source=subtitles_source,
+                            subtitles_langs=subtitles_langs,
+                            subtitles_format=subtitles_format,
+                        )
                     st.rerun()
 
             uploaded_file = st.file_uploader(t("Or upload video"), type=load_key("allowed_video_formats") + load_key("allowed_audio_formats"))

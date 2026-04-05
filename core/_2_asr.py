@@ -1,3 +1,5 @@
+import os
+
 from core.utils import *
 from core.asr_backend.demucs_vl import demucs_audio
 from core.asr_backend.audio_preprocess import process_transcription, convert_video_to_audio, split_audio, save_results, normalize_audio_volume
@@ -17,12 +19,36 @@ def transcribe():
     else:
         vocal_audio = _RAW_AUDIO_FILE
 
+    all_results = []
+    runtime = load_key("whisper.runtime")
+    if runtime == "youtube":
+        from core.asr_backend.youtube_json3 import (
+            find_youtube_json3,
+            parse_youtube_json3_to_event_sentences,
+            parse_youtube_json3_to_words,
+        )
+        preferred_lang = load_key("whisper.language")
+        json3_path = find_youtube_json3("static/output", preferred_lang=preferred_lang)
+        rprint(f"[cyan]📝 Using YouTube subtitles (json3) to build cleaned_chunks:[/cyan] {json3_path}")
+        df = parse_youtube_json3_to_words(json3_path)
+        save_results(df)
+        try:
+            youtube_sentence_split = load_key("whisper.youtube_sentence_split")
+        except KeyError:
+            youtube_sentence_split = "nlp"
+
+        if str(youtube_sentence_split).strip().lower() == "events":
+            language = load_key("whisper.detected_language") if preferred_lang == "auto" else preferred_lang
+            sentences = parse_youtube_json3_to_event_sentences(json3_path, language=language)
+            os.makedirs(os.path.dirname(_3_1_SPLIT_BY_NLP), exist_ok=True)
+            with open(_3_1_SPLIT_BY_NLP, "w", encoding="utf-8") as f:
+                f.write("\n".join(sentences))
+        return
+
     # 3. Extract audio
     segments = split_audio(_RAW_AUDIO_FILE)
     
     # 4. Transcribe audio by clips
-    all_results = []
-    runtime = load_key("whisper.runtime")
     if runtime == "local":
         from core.asr_backend.whisperX_local import transcribe_audio as ts
         rprint("[cyan]🎤 Transcribing audio with local model...[/cyan]")
@@ -32,6 +58,8 @@ def transcribe():
     elif runtime == "elevenlabs":
         from core.asr_backend.elevenlabs_asr import transcribe_audio_elevenlabs as ts
         rprint("[cyan]🎤 Transcribing audio with ElevenLabs API...[/cyan]")
+    else:
+        raise ValueError(f"Invalid whisper.runtime: {runtime}")
 
     for start, end in segments:
         result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end)

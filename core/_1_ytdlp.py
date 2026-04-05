@@ -23,7 +23,15 @@ def update_ytdlp():
     from yt_dlp import YoutubeDL
     return YoutubeDL
 
-def download_video_ytdlp(url, save_path='static/output', resolution='1080'):
+def download_video_ytdlp(
+    url,
+    save_path='static/output',
+    resolution='1080',
+    download_subtitles: bool = False,
+    subtitles_source: str = "auto",
+    subtitles_langs: list[str] | None = None,
+    subtitles_format: str = "srt",
+):
     os.makedirs(save_path, exist_ok=True)
     ydl_opts = {
         'format': 'bestvideo+bestaudio/best' if resolution == 'best' else f'bestvideo[height<={resolution}]+bestaudio/best[height<={resolution}]',
@@ -32,6 +40,28 @@ def download_video_ytdlp(url, save_path='static/output', resolution='1080'):
         'writethumbnail': True,
         'postprocessors': [{'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg'}],
     }
+
+    if download_subtitles:
+        normalized_source = (subtitles_source or "").strip().lower()
+        if normalized_source not in {"auto", "manual", "both"}:
+            normalized_source = "auto"
+
+        if normalized_source in {"manual", "both"}:
+            ydl_opts["writesubtitles"] = True
+        if normalized_source in {"auto", "both"}:
+            ydl_opts["writeautomaticsub"] = True
+
+        normalized_format = (subtitles_format or "").strip().lower()
+        if normalized_format in {"srt", "vtt", "json3"}:
+            ydl_opts["subtitlesformat"] = normalized_format
+
+        if subtitles_langs:
+            langs = [str(x).strip() for x in subtitles_langs if str(x).strip()]
+            if langs:
+                ydl_opts["subtitleslangs"] = langs
+
+        if normalized_format == "srt":
+            ydl_opts["postprocessors"].append({'key': 'FFmpegSubtitlesConvertor', 'format': 'srt'})
 
     # Read Youtube Cookie File
     cookies_path = load_key("youtube.cookies_path")

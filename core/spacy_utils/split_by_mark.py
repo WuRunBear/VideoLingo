@@ -26,6 +26,13 @@ def split_by_mark(nlp):
 
     for _, row in chunks.iterrows():
         spk = row.get('speaker_id', None)
+        if pd.isna(spk):
+            spk = None
+        elif isinstance(spk, (int, float)) and not isinstance(spk, bool):
+            try:
+                spk = int(spk)
+            except Exception:
+                spk = str(spk)
         if spk != current_speaker:
             if current_group:
                 groups.append((current_speaker, current_group))

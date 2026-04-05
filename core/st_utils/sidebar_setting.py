@@ -59,7 +59,16 @@ def page_setting():
                 update_key("whisper.language", langs[lang])
                 st.rerun()
 
-        runtime = st.selectbox(t("WhisperX Runtime"), options=["local", "cloud", "elevenlabs"], index=["local", "cloud", "elevenlabs"].index(load_key("whisper.runtime")), help=t("Local runtime requires >8GB GPU, cloud runtime requires 302ai API key, elevenlabs runtime requires ElevenLabs API key"))
+        runtime_options = ["local", "cloud", "elevenlabs", "youtube"]
+        current_runtime = load_key("whisper.runtime")
+        if current_runtime not in runtime_options:
+            current_runtime = "local"
+        runtime = st.selectbox(
+            t("WhisperX Runtime"),
+            options=runtime_options,
+            index=runtime_options.index(current_runtime),
+            help=t("Local runtime requires >8GB GPU, cloud runtime requires 302ai API key, elevenlabs runtime requires ElevenLabs API key")
+        )
         if runtime != load_key("whisper.runtime"):
             update_key("whisper.runtime", runtime)
             st.rerun()
