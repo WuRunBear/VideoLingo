@@ -331,7 +331,7 @@ createApp({
                 name = "mapping_v3.7.xlsx";
             } else {
                 data = chunksData.value.sort((a,b)=>a.start-b.start).map(w => ({
-                    text: w.text, start: Number(w.start.toFixed(3)), end: Number(w.end.toFixed(3)), speaker_id: w.speaker_id
+                    text: `\"${w.text}\"`, start: Number(w.start.toFixed(3)), end: Number(w.end.toFixed(3)), speaker_id: w.speaker_id
                 }));
                 name = "chunks_v3.7.xlsx";
             }
