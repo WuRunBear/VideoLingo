@@ -1,9 +1,21 @@
 import json
 import os
+import re
 from typing import Any
 
 import pandas as pd
 from core.utils.config_utils import get_joiner
+
+
+_BRACKET_TAG_RE = re.compile(r"\[[A-Za-z][A-Za-z\s]*\]")
+_LEADING_GT_RE = re.compile(r"^\s*>+\s*")
+
+
+def _clean_json3_text(text: str) -> str:
+    text = text.replace("\\u003e", "")
+    text = _LEADING_GT_RE.sub("", text)
+    text = _BRACKET_TAG_RE.sub("", text)
+    return text.strip()
 
 
 def _iter_json3_token_events(data: dict[str, Any]):
@@ -49,6 +61,7 @@ def parse_youtube_json3_to_words(json3_path: str, max_end_seconds: float | None 
             if text == "\n":
                 continue
             text = text.strip()
+            text = _clean_json3_text(text)
             if not text:
                 continue
             offset_ms = int(seg.get("tOffsetMs", 0) or 0)
@@ -122,6 +135,7 @@ def parse_youtube_json3_to_event_sentences(json3_path: str, language: str) -> li
         segs = event.get("segs", [])
         raw = "".join(str(seg.get("utf8", "")) for seg in segs if isinstance(seg, dict))
         raw = raw.replace("\n", "")
+        raw = _clean_json3_text(raw)
 
         if joiner == " ":
             text = " ".join(raw.split()).strip()
