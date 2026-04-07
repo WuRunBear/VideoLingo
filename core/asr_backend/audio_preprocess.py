@@ -186,6 +186,7 @@ def save_results(df: pd.DataFrame):
 
     # Remove rows where 'text' is empty
     initial_rows = len(df)
+    df['text'] = df['text'].astype(str).str.strip()
     df = df[df['text'].str.len() > 0]
     removed_rows = initial_rows - len(df)
     if removed_rows > 0:
