@@ -1,3 +1,4 @@
+import os
 import platform
 import subprocess
 
@@ -48,8 +49,12 @@ def merge_video_audio():
         return
 
     # Normalize dub audio
+    try:
+        dub_target_db = float(load_key("dubbing.dub_target_db"))
+    except Exception:
+        dub_target_db = -14.0
     normalized_dub_audio = 'static/output/normalized_dub.wav'
-    normalize_audio_volume(DUB_AUDIO, normalized_dub_audio)
+    normalize_audio_volume(DUB_AUDIO, normalized_dub_audio, target_db=dub_target_db)
     
     # Merge video and audio with translated subtitles
     video = cv2.VideoCapture(VIDEO_FILE)
