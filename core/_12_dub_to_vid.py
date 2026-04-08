@@ -66,14 +66,24 @@ def merge_video_audio():
         f"BackColour={TRANS_BACK_COLOR},Alignment=2,MarginV=27,BorderStyle=4'"
     )
     
-    cmd = [
-        'ffmpeg', '-y', '-i', VIDEO_FILE, '-i', background_file, '-i', normalized_dub_audio,
+    try:
+        mix_original_background = bool(load_key("dubbing.mix_original_background"))
+    except Exception:
+        mix_original_background = True
+
+    has_background = mix_original_background and os.path.exists(background_file)
+
+    cmd = ['ffmpeg', '-y', '-i', VIDEO_FILE]
+    if has_background:
+        cmd.extend(['-i', background_file])
+    cmd.extend(['-i', normalized_dub_audio])
+    cmd.extend([
         '-filter_complex',
         f'[0:v]scale={TARGET_WIDTH}:{TARGET_HEIGHT}:force_original_aspect_ratio=decrease,'
         f'pad={TARGET_WIDTH}:{TARGET_HEIGHT}:(ow-iw)/2:(oh-ih)/2,'
         f'{subtitle_filter}[v];'
-        f'[1:a][2:a]amix=inputs=2:duration=first:dropout_transition=3[a]'
-    ]
+        + (f'[1:a][2:a]amix=inputs=2:duration=first:dropout_transition=3[a]' if has_background else f'[1:a]anull[a]')
+    ])
 
     if load_key("ffmpeg_gpu"):
         rprint("[bold green]Using GPU acceleration...[/bold green]")

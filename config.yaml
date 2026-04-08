@@ -71,7 +71,11 @@ pause_before_translate: false
 
 ## ======================== Dubbing Settings ======================== ##
 # TTS selection [sf_fish_tts, openai_tts, gpt_sovits, azure_tts, fish_tts, edge_tts, custom_tts]
-tts_method: 'azure_tts'
+tts_method: 'custom_tts'
+
+dubbing:
+  mix_original_vocal: true
+  mix_original_background: true
 
 # SiliconFlow FishTTS
 sf_fish_tts:

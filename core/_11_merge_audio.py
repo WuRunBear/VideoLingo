@@ -202,7 +202,11 @@ def merge_full_audio():
     console.print(f"[bold green]✅ Sample rate: {sample_rate}Hz[/bold green]")
 
     console.print("[bold cyan]🔄 Starting audio merge process...[/bold cyan]")
-    base_audio_path = _VOCAL_AUDIO_FILE if os.path.exists(_VOCAL_AUDIO_FILE) else None
+    try:
+        mix_original_vocal = bool(load_key("dubbing.mix_original_vocal"))
+    except Exception:
+        mix_original_vocal = True
+    base_audio_path = _VOCAL_AUDIO_FILE if mix_original_vocal and os.path.exists(_VOCAL_AUDIO_FILE) else None
     merged_audio = merge_audio_segments(audios, new_sub_times, sample_rate, base_audio_path=base_audio_path)
     
     with console.status("[bold cyan]💾 Exporting final audio file...[/bold cyan]"):

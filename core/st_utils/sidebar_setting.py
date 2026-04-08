@@ -93,6 +93,24 @@ def page_setting():
             update_key("burn_subtitles", burn_subtitles)
             st.rerun()
     with st.expander(t("Dubbing Settings"), expanded=True):
+        mix_original_vocal = st.toggle(
+            t("Mix Original Vocal"),
+            value=load_key("dubbing.mix_original_vocal"),
+            help=t("Overlay original vocal track under TTS (duck during dubbed ranges)")
+        )
+        if mix_original_vocal != load_key("dubbing.mix_original_vocal"):
+            update_key("dubbing.mix_original_vocal", mix_original_vocal)
+            st.rerun()
+
+        mix_original_background = st.toggle(
+            t("Mix Original Background"),
+            value=load_key("dubbing.mix_original_background"),
+            help=t("Mix separated background track into final video")
+        )
+        if mix_original_background != load_key("dubbing.mix_original_background"):
+            update_key("dubbing.mix_original_background", mix_original_background)
+            st.rerun()
+
         tts_methods = ["azure_tts", "openai_tts", "fish_tts", "sf_fish_tts", "edge_tts", "gpt_sovits", "custom_tts", "sf_cosyvoice2", "f5tts"]
         select_tts = st.selectbox(t("TTS Method"), options=tts_methods, index=tts_methods.index(load_key("tts_method")))
         if select_tts != load_key("tts_method"):
