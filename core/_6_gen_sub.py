@@ -65,7 +65,7 @@ def get_sentence_timestamps(df_words, df_sentences):
     position_to_word_idx = {}
     
     for idx, word in enumerate(df_words['text']):
-        clean_word = remove_punctuation(word.lower())
+        clean_word = remove_punctuation(word.lower()).replace(" ", "")
         start_pos = len(full_words_str)
         full_words_str += clean_word
         for pos in range(start_pos, len(full_words_str)):
