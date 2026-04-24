@@ -376,24 +376,36 @@ def _cmd_append(args):
         print("未找到 ffmpeg。请先安装并加入 PATH。")
         return 1
 
-    manifest_path = _resolve_path(args.json)
-    data = _load_manifest(manifest_path)
-    project_root = _project_root_by_manifest(manifest_path)
-    items = data["items"]
-    _validate_item_paths(project_root, items)
+    manifest_path = _resolve_path(args.json) if str(getattr(args, "json", "")).strip() else None
+    data = None
+    project_root = None
+    items = []
+    if manifest_path is not None:
+        data = _load_manifest(manifest_path)
+        project_root = _project_root_by_manifest(manifest_path)
+        items = data["items"]
+        _validate_item_paths(project_root, items)
 
-    settings = data.get("video_settings", {})
+    settings = (data or {}).get("video_settings", {})
     width = int(settings.get("width", 1920))
     height = int(settings.get("height", 1080))
     fps = int(settings.get("fps", 30))
     crf = int(settings.get("crf", 18))
     preset = str(settings.get("preset", "veryfast"))
 
+    add_video_raw = str(getattr(args, "add_video", "")).strip()
+    if not items and not add_video_raw:
+        print("append 需要至少提供 --json 或 --add-video 之一。")
+        return 1
+
     base_raw = str(args.base_video).strip()
     base_abs = Path(base_raw)
     if not base_abs.is_absolute():
-        base_candidate = _abs_from_project(project_root, base_raw)
-        base_abs = base_candidate if base_candidate.exists() else _resolve_path(base_raw)
+        if project_root is not None:
+            base_candidate = _abs_from_project(project_root, base_raw)
+            base_abs = base_candidate if base_candidate.exists() else _resolve_path(base_raw)
+        else:
+            base_abs = _resolve_path(base_raw)
     base_abs = base_abs.resolve()
     if not base_abs.exists():
         print(f"基础视频不存在: {base_abs}")
@@ -401,11 +413,14 @@ def _cmd_append(args):
 
     out_abs = Path(str(args.out).strip()) if str(args.out).strip() else base_abs
     if not out_abs.is_absolute():
-        out_abs = _abs_from_project(project_root, str(out_abs))
+        if project_root is not None:
+            out_abs = _abs_from_project(project_root, str(out_abs))
+        else:
+            out_abs = (base_abs.parent / str(out_abs)).resolve()
     out_abs = out_abs.resolve()
     out_abs.parent.mkdir(parents=True, exist_ok=True)
 
-    seg_dir = project_root / "segments_append"
+    seg_dir = (project_root or out_abs.parent).resolve() / "segments_append"
     if seg_dir.exists() and args.clean_segments:
         shutil.rmtree(seg_dir, ignore_errors=True)
     seg_dir.mkdir(parents=True, exist_ok=True)
@@ -413,24 +428,43 @@ def _cmd_append(args):
     base_norm = seg_dir / "_base_norm.mp4"
     _normalize_video(base_abs, base_norm, width, height, fps, crf, preset)
 
-    seg_paths = []
-    for item in items:
-        idx = int(item.get("index", 0))
-        image_abs = _abs_from_project(project_root, str(item.get("image_path", "")))
-        audio_rel = str(item.get("audio_path", "")).strip()
-        if not audio_rel:
-            print(f"条目 {idx} 缺少 audio_path")
-            return 1
-        audio_abs = _abs_from_project(project_root, audio_rel)
-        if not audio_abs.exists():
-            print(f"条目 {idx} 音频不存在: {audio_abs}")
-            return 1
-        seg_path = seg_dir / f"{idx:04d}.mp4"
-        _make_segment(image_abs, audio_abs, seg_path, width, height, fps, crf, preset)
-        seg_paths.append(seg_path)
-        print(f"已生成片段: {seg_path}")
+    concat_paths = [base_norm]
 
-    concat_paths = [base_norm] + seg_paths
+    if items:
+        seg_paths = []
+        for item in items:
+            idx = int(item.get("index", 0))
+            image_abs = _abs_from_project(project_root, str(item.get("image_path", "")))
+            audio_rel = str(item.get("audio_path", "")).strip()
+            if not audio_rel:
+                print(f"条目 {idx} 缺少 audio_path")
+                return 1
+            audio_abs = _abs_from_project(project_root, audio_rel)
+            if not audio_abs.exists():
+                print(f"条目 {idx} 音频不存在: {audio_abs}")
+                return 1
+            seg_path = seg_dir / f"{idx:04d}.mp4"
+            _make_segment(image_abs, audio_abs, seg_path, width, height, fps, crf, preset)
+            seg_paths.append(seg_path)
+            print(f"已生成片段: {seg_path}")
+        concat_paths.extend(seg_paths)
+
+    if add_video_raw:
+        add_abs = Path(add_video_raw)
+        if not add_abs.is_absolute():
+            if project_root is not None:
+                add_candidate = _abs_from_project(project_root, add_video_raw)
+                add_abs = add_candidate if add_candidate.exists() else _resolve_path(add_video_raw)
+            else:
+                add_abs = _resolve_path(add_video_raw)
+        add_abs = add_abs.resolve()
+        if not add_abs.exists():
+            print(f"要追加的视频不存在: {add_abs}")
+            return 1
+        add_norm = seg_dir / "_add_norm.mp4"
+        _normalize_video(add_abs, add_norm, width, height, fps, crf, preset)
+        concat_paths.append(add_norm)
+
     inplace = out_abs == base_abs
     out_tmp = out_abs
     if inplace:
@@ -473,8 +507,9 @@ def main(argv=None):
     p_video.set_defaults(_handler=_cmd_video)
 
     p_append = subparsers.add_parser("append", help="把 JSON 生成的内容追加到已有视频后面")
-    p_append.add_argument("--json", required=True, help="manifest.json 路径")
+    p_append.add_argument("--json", default="", help="manifest.json 路径（提供则会生成片段并追加）")
     p_append.add_argument("--base-video", required=True, help="基础视频路径（支持相对项目目录）")
+    p_append.add_argument("--add-video", default="", help="要追加的视频路径（会放在 JSON 生成片段之后；支持相对项目目录）")
     p_append.add_argument("--out", default="", help="输出视频路径（默认覆盖 base-video）")
     p_append.add_argument("--clean-segments", action="store_true", help="生成前先清理 segments_append 目录")
     p_append.set_defaults(_handler=_cmd_append)
